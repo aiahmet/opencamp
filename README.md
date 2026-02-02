@@ -1,36 +1,145 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# OpenCamp
+
+A modern learning platform for programming challenges built with Next.js 16, Convex, Clerk, and Docker.
+
+## Prerequisites
+
+- Node.js (v18 or higher)
+- Docker (installed and running)
+- npm
 
 ## Getting Started
 
-First, run the development server:
+### Environment Setup
+
+1. Copy `.env.local.example` to `.env.local` (if available) or create `.env.local` with:
+
+```env
+# Clerk
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
+CLERK_WEBHOOK_SECRET=your_clerk_webhook_secret
+
+# Convex
+NEXT_PUBLIC_CONVEX_URL=your_convex_url
+CONVEX_DEPLOYMENT=your_convex_deployment
+
+# Runner Service
+RUNNER_URL=http://localhost:4001
+```
+
+2. Install dependencies:
+
+```bash
+npm install
+```
+
+3. Install runner dependencies:
+
+```bash
+cd runner && npm install
+```
+
+### Starting the Application
+
+You need to run two separate terminals:
+
+**Terminal 1: Next.js + Convex**
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) with your browser.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+**Terminal 2: Runner Service**
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run dev:runner
+```
+
+The runner service will start on [http://localhost:4001](http://localhost:4001).
+
+### Local Runner Service
+
+The runner service executes Java code in isolated Docker containers with:
+
+- No network access (`--network none`)
+- CPU limits (0.5 cores)
+- Memory limits (256MB)
+- 10 second timeout
+- Security hardening (no privileges, capabilities dropped)
+
+**Runner Endpoints:**
+
+- `POST /health` - Health check
+- `POST /run/java` - Execute Java code with test suite
+
+### Database Seeding
+
+To seed the database with sample curriculum data:
+
+```bash
+npx convex run seed
+```
+
+This creates:
+- Java language
+- Java Fundamentals track
+- Basics module
+- Variables & Types lesson
+- Add Two Numbers challenge
+
+## Project Structure
+
+```
+├── app/                    # Next.js App Router
+│   ├── learn/             # Learning pages
+│   └── api/               # API routes
+├── components/            # React components
+│   └── challenges/        # Challenge-specific components
+├── convex/                # Convex backend
+│   ├── schema.ts         # Database schema
+│   ├── execution.ts       # Code execution actions
+│   ├── submissions.ts     # Submission logic
+│   ├── progress.ts       # Progress tracking
+│   └── drafts.ts         # Draft autosave
+├── runner/                # Docker execution service
+│   └── src/               # Runner source code
+└── public/                # Static assets
+```
+
+## Development
+
+### Running Tests
+
+The challenge page provides a "Run" button that:
+
+1. Saves your code as a draft
+2. Submits it to the runner service
+3. Executes in a Docker container
+4. Shows test results and compilation errors
+
+### Code Execution Flow
+
+1. User clicks "Run" in UI
+2. Convex creates submission record (queued → running)
+3. Convex action calls runner service
+4. Runner executes Java in Docker container
+5. Runner returns test results
+6. Convex patches submission with results
+7. UI refreshes to show pass/fail status
+
+## Deployment
+
+This project uses:
+- [Vercel](https://vercel.com) for Next.js hosting
+- [Convex Cloud](https://convex.dev) for backend
+- Docker-compatible runner (requires Docker support)
 
 ## Learn More
 
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [Next.js Documentation](https://nextjs.org)
+- [Convex Documentation](https://docs.convex.dev)
+- [Clerk Documentation](https://clerk.com/docs)
+- [Docker Documentation](https://docs.docker.com)
