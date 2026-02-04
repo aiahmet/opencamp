@@ -35,6 +35,14 @@ const DEFAULT_LIMITS = {
   outputLimitBytes: 262144, // 256KB
 };
 
+// Read limits from environment variables with defaults
+const getConfiguredLimits = (): typeof DEFAULT_LIMITS => ({
+  cpu: parseFloat(process.env.RUNNER_CPU_LIMITS || "0.5"),
+  memoryMb: parseInt(process.env.RUNNER_MEMORY_MB || "256", 10),
+  timeoutMs: parseInt(process.env.RUNNER_TIMEOUT_MS || "10000", 10),
+  outputLimitBytes: parseInt(process.env.RUNNER_OUTPUT_LIMIT_BYTES || "262144", 10),
+});
+
 function truncateOutput(stdout: string, stderr: string, limitBytes: number): { stdout: string; stderr: string; outputTruncated: boolean } {
   const encoder = new TextEncoder();
   let outputTruncated = false;
@@ -91,7 +99,7 @@ export async function runJavaInDocker(
   limits?: Partial<typeof DEFAULT_LIMITS>
 ): Promise<RunJavaResponse> {
   const startTime = Date.now();
-  const actualLimits = { ...DEFAULT_LIMITS, ...limits };
+  const actualLimits = { ...getConfiguredLimits(), ...limits };
   const result: RunJavaResponse = {
     passed: false,
     compile: { ok: false },
@@ -263,7 +271,7 @@ export async function runJavaProjectInDocker(
   limits?: Partial<typeof DEFAULT_LIMITS>
 ): Promise<RunJavaResponse> {
   const startTime = Date.now();
-  const actualLimits = { ...DEFAULT_LIMITS, ...limits };
+  const actualLimits = { ...getConfiguredLimits(), ...limits };
   const result: RunJavaResponse = {
     passed: false,
     compile: { ok: false },
