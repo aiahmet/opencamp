@@ -34,10 +34,10 @@ export const ensureUser = internalMutation({
     if (!user) {
       const newUserId = await ctx.db.insert("users", {
         clerkUserId,
-        email: identity.email,
-        username: identity.email?.split("@")[0],
-        name: identity.name,
-        imageUrl: identity.pictureUrl,
+        ...(identity.email !== undefined ? { email: identity.email } : {}),
+        ...(identity.email !== undefined ? { username: identity.email.split("@")[0] } : {}),
+        ...(identity.name !== undefined ? { name: identity.name } : {}),
+        ...(identity.pictureUrl !== undefined ? { imageUrl: identity.pictureUrl } : {}),
         roles: ["learner"],
         createdAt: Date.now(),
       });
@@ -64,8 +64,8 @@ export const syncUser = mutation({
     if (existingUser) {
       await ctx.db.patch(existingUser._id, {
         email: args.email,
-        name: args.name,
-        imageUrl: args.imageUrl,
+        ...(args.name !== undefined ? { name: args.name } : {}),
+        ...(args.imageUrl !== undefined ? { imageUrl: args.imageUrl } : {}),
       });
       return existingUser._id;
     }
@@ -73,9 +73,9 @@ export const syncUser = mutation({
     const userId = await ctx.db.insert("users", {
       clerkUserId: args.clerkUserId,
       email: args.email,
-      name: args.name,
-      imageUrl: args.imageUrl,
-      username: args.email?.split("@")[0],
+      ...(args.name !== undefined ? { name: args.name } : {}),
+      ...(args.imageUrl !== undefined ? { imageUrl: args.imageUrl } : {}),
+      ...(args.email !== undefined ? { username: args.email.split("@")[0] } : {}),
       roles: ["learner"],
       createdAt: Date.now(),
     });

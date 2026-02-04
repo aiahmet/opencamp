@@ -116,10 +116,10 @@ export const createContribution = mutation({
       authorId: user._id,
       itemId: args.itemId,
       status: "draft",
-      title: args.fields?.title ?? item.title,
-      content: args.fields?.content ?? item.content,
-      prompt: args.fields?.prompt ?? item.prompt,
-      starterCode: args.fields?.starterCode ?? item.starterCode,
+      ...(args.fields?.title !== undefined ? { title: args.fields.title } : {}),
+      ...(args.fields?.content !== undefined ? { content: args.fields.content } : {}),
+      ...(args.fields?.prompt !== undefined ? { prompt: args.fields.prompt } : {}),
+      ...(args.fields?.starterCode !== undefined ? { starterCode: args.fields.starterCode } : {}),
       testSuiteDefinition: args.fields?.testSuiteDefinition ?? testSuiteDefinition,
       changelog: args.changelog,
       createdAt: now,
@@ -172,12 +172,12 @@ export const updateContribution = mutation({
     }
 
     await ctx.db.patch(args.contributionId, {
-      title: args.fields.title ?? contribution.title,
-      content: args.fields.content ?? contribution.content,
-      prompt: args.fields.prompt ?? contribution.prompt,
-      starterCode: args.fields.starterCode ?? contribution.starterCode,
-      testSuiteDefinition: args.fields.testSuiteDefinition ?? contribution.testSuiteDefinition,
-      changelog: args.changelog ?? contribution.changelog,
+      ...(args.fields.title !== undefined ? { title: args.fields.title } : {}),
+      ...(args.fields.content !== undefined ? { content: args.fields.content } : {}),
+      ...(args.fields.prompt !== undefined ? { prompt: args.fields.prompt } : {}),
+      ...(args.fields.starterCode !== undefined ? { starterCode: args.fields.starterCode } : {}),
+      ...(args.fields.testSuiteDefinition !== undefined ? { testSuiteDefinition: args.fields.testSuiteDefinition } : {}),
+      ...(args.changelog !== undefined ? { changelog: args.changelog } : {}),
       updatedAt: Date.now(),
     });
   },
@@ -347,10 +347,10 @@ export const finalizePublishContribution = mutation({
       itemId: item._id,
       version: args.nextVersion,
       snapshot: {
-        title: contribution.title,
-        content: contribution.content,
-        prompt: contribution.prompt,
-        starterCode: contribution.starterCode,
+        ...(contribution.title !== undefined ? { title: contribution.title } : {}),
+        ...(contribution.content !== undefined ? { content: contribution.content } : {}),
+        ...(contribution.prompt !== undefined ? { prompt: contribution.prompt } : {}),
+        ...(contribution.starterCode !== undefined ? { starterCode: contribution.starterCode } : {}),
         testSuiteDefinition: contribution.testSuiteDefinition,
       },
       changelog: contribution.changelog,
@@ -360,10 +360,10 @@ export const finalizePublishContribution = mutation({
     });
 
     await ctx.db.patch(item._id, {
-      title: contribution.title,
-      content: contribution.content,
-      prompt: contribution.prompt,
-      starterCode: contribution.starterCode,
+      ...(contribution.title !== undefined ? { title: contribution.title } : {}),
+      ...(contribution.content !== undefined ? { content: contribution.content } : {}),
+      ...(contribution.prompt !== undefined ? { prompt: contribution.prompt } : {}),
+      ...(contribution.starterCode !== undefined ? { starterCode: contribution.starterCode } : {}),
     });
 
     if (contribution.testSuiteDefinition && item.testSuiteId) {

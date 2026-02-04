@@ -106,7 +106,7 @@ export const createComment = mutation({
     await ctx.db.insert("comments", {
       discussionId: args.discussionId,
       authorId: user._id,
-      parentCommentId: args.parentCommentId,
+      ...(args.parentCommentId !== undefined ? { parentCommentId: args.parentCommentId } : {}),
       body: args.body,
       removed: false,
       createdAt: now,
@@ -162,7 +162,7 @@ export const removeComment = mutation({
       action: "remove_comment",
       discussionId: comment.discussionId,
       commentId: args.commentId,
-      reason: args.reason,
+      ...(args.reason !== undefined ? { reason: args.reason } : {}),
       createdAt: Date.now(),
     });
   },
@@ -214,7 +214,7 @@ export const restoreComment = mutation({
       action: "restore_comment",
       discussionId: comment.discussionId,
       commentId: args.commentId,
-      reason: args.reason,
+      ...(args.reason !== undefined ? { reason: args.reason } : {}),
       createdAt: Date.now(),
     });
   },

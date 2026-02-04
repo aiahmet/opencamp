@@ -162,7 +162,7 @@ export default function ContributePage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {myContributions.map((contribution: { _id: string; item: { title?: string; languageName?: string; trackSlug?: string; kind?: string } | null; status: string; updatedAt: number }) => (
+                {myContributions.map((contribution) => (
                   <tr key={contribution._id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">

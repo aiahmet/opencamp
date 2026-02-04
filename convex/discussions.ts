@@ -279,7 +279,7 @@ export const setThreadLocked = mutation({
       actorId: user._id,
       action: args.locked ? "lock_thread" : "unlock_thread",
       discussionId: args.discussionId,
-      reason: args.reason,
+      ...(args.reason !== undefined ? { reason: args.reason } : {}),
       createdAt: Date.now(),
     });
   },
@@ -347,8 +347,8 @@ export const setAcceptedAnswer = mutation({
       actorId: user._id,
       action: args.commentId ? "set_accepted" : "unset_accepted",
       discussionId: args.discussionId,
-      commentId: args.commentId === null ? undefined : args.commentId,
-      reason: args.reason,
+      ...(args.commentId !== null && args.commentId !== undefined ? { commentId: args.commentId } : {}),
+      ...(args.reason !== undefined ? { reason: args.reason } : {}),
       createdAt: Date.now(),
     });
   },

@@ -173,7 +173,6 @@ export const createAndRunSubmission = action({
           userId: user._id,
           kind: "challenge",
           itemId: args.itemId,
-          projectId: undefined,
           submissionId,
           startedAt: runStartTime,
           finishedAt: Date.now(),
@@ -181,7 +180,7 @@ export const createAndRunSubmission = action({
           timingMs: submission.result.timingMs || 0,
           compileOk: submission.result.compile.ok,
           testsPassed: status === "passed",
-          testsFailedCount: testsFailedCount > 0 ? testsFailedCount : undefined,
+          ...(testsFailedCount > 0 ? { testsFailedCount } : {}),
         });
       }
 
@@ -206,7 +205,6 @@ export const createAndRunSubmission = action({
         userId: user._id,
         kind: "challenge",
         itemId: args.itemId,
-        projectId: undefined,
         submissionId,
         startedAt: runStartTime,
         finishedAt: Date.now(),

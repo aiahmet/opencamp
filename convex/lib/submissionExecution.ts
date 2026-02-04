@@ -143,9 +143,8 @@ export async function logRateLimitedAttempt(
   await logExecution(ctx, {
     userId,
     kind,
-    itemId,
-    projectId,
-    submissionId: undefined,
+    ...(itemId !== undefined ? { itemId } : {}),
+    ...(projectId !== undefined ? { projectId } : {}),
     startedAt: Date.now(),
     finishedAt: Date.now(),
     status: "rate_limited",
@@ -167,9 +166,8 @@ export async function logQuotaExceededAttempt(
   await logExecution(ctx, {
     userId,
     kind,
-    itemId,
-    projectId,
-    submissionId: undefined,
+    ...(itemId !== undefined ? { itemId } : {}),
+    ...(projectId !== undefined ? { projectId } : {}),
     startedAt: Date.now(),
     finishedAt: Date.now(),
     status: "quota_exceeded",

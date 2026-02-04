@@ -35,16 +35,22 @@ app.post<unknown, RunJavaResponse, RunJavaRequest>("/run/java", async (req, res)
   try {
     const validationResult = RunJavaRequestSchema.safeParse(req.body);
     if (!validationResult.success) {
+      const firstIssue = validationResult.error.issues[0];
+      const errorMessage = firstIssue ? firstIssue.message : "Invalid request";
       res.status(400).json({
         passed: false,
-        compile: { ok: false, stderr: "Invalid request: " + validationResult.error.issues[0].message },
+        compile: { ok: false, stderr: "Invalid request: " + errorMessage },
         tests: [],
         timingMs: 0,
       });
       return;
     }
     const { code, testSuite, limits } = validationResult.data;
-    const result = await runJavaInDocker(code, testSuite, limits);
+    // Filter out undefined values from limits to avoid exactOptionalPropertyTypes issues
+    const filteredLimits = limits ? Object.fromEntries(
+      Object.entries(limits).filter(([_, v]) => v !== undefined)
+    ) : {};
+    const result = await runJavaInDocker(code, testSuite, filteredLimits as Parameters<typeof runJavaInDocker>[2]);
     res.json(result);
   } catch (error) {
     console.error("Error running Java code:", error);
@@ -62,16 +68,22 @@ app.post<unknown, RunJavaResponse, RunJavaProjectRequest>("/run/java-project", a
   try {
     const validationResult = RunJavaProjectRequestSchema.safeParse(req.body);
     if (!validationResult.success) {
+      const firstIssue = validationResult.error.issues[0];
+      const errorMessage = firstIssue ? firstIssue.message : "Invalid request";
       res.status(400).json({
         passed: false,
-        compile: { ok: false, stderr: "Invalid request: " + validationResult.error.issues[0].message },
+        compile: { ok: false, stderr: "Invalid request: " + errorMessage },
         tests: [],
         timingMs: 0,
       });
       return;
     }
     const { files, testSuite, limits } = validationResult.data;
-    const result = await runJavaProjectInDocker(files, testSuite, limits);
+    // Filter out undefined values from limits to avoid exactOptionalPropertyTypes issues
+    const filteredLimits = limits ? Object.fromEntries(
+      Object.entries(limits).filter(([_, v]) => v !== undefined)
+    ) : {};
+    const result = await runJavaProjectInDocker(files, testSuite, filteredLimits as Parameters<typeof runJavaProjectInDocker>[2]);
     res.json(result);
   } catch (error) {
     console.error("Error running Java project:", error);
@@ -89,16 +101,22 @@ app.post<unknown, RunJavaResponse, RunPythonRequest>("/run/python", async (req, 
   try {
     const validationResult = RunPythonRequestSchema.safeParse(req.body);
     if (!validationResult.success) {
+      const firstIssue = validationResult.error.issues[0];
+      const errorMessage = firstIssue ? firstIssue.message : "Invalid request";
       res.status(400).json({
         passed: false,
-        compile: { ok: false, stderr: "Invalid request: " + validationResult.error.issues[0].message },
+        compile: { ok: false, stderr: "Invalid request: " + errorMessage },
         tests: [],
         timingMs: 0,
       });
       return;
     }
     const { code, testSuite, limits } = validationResult.data;
-    const result = await runPythonInDocker(code, testSuite, limits);
+    // Filter out undefined values from limits to avoid exactOptionalPropertyTypes issues
+    const filteredLimits = limits ? Object.fromEntries(
+      Object.entries(limits).filter(([_, v]) => v !== undefined)
+    ) : {};
+    const result = await runPythonInDocker(code, testSuite, filteredLimits as Parameters<typeof runPythonInDocker>[2]);
     res.json(result);
   } catch (error) {
     console.error("Error running Python code:", error);
@@ -116,16 +134,22 @@ app.post<unknown, RunJavaResponse, RunPythonProjectRequest>("/run/python-project
   try {
     const validationResult = RunPythonProjectRequestSchema.safeParse(req.body);
     if (!validationResult.success) {
+      const firstIssue = validationResult.error.issues[0];
+      const errorMessage = firstIssue ? firstIssue.message : "Invalid request";
       res.status(400).json({
         passed: false,
-        compile: { ok: false, stderr: "Invalid request: " + validationResult.error.issues[0].message },
+        compile: { ok: false, stderr: "Invalid request: " + errorMessage },
         tests: [],
         timingMs: 0,
       });
       return;
     }
     const { files, testSuite, limits } = validationResult.data;
-    const result = await runPythonProjectInDocker(files, testSuite, limits);
+    // Filter out undefined values from limits to avoid exactOptionalPropertyTypes issues
+    const filteredLimits = limits ? Object.fromEntries(
+      Object.entries(limits).filter(([_, v]) => v !== undefined)
+    ) : {};
+    const result = await runPythonProjectInDocker(files, testSuite, filteredLimits as Parameters<typeof runPythonProjectInDocker>[2]);
     res.json(result);
   } catch (error) {
     console.error("Error running Python project:", error);

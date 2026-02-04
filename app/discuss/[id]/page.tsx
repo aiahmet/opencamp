@@ -38,7 +38,7 @@ export default function ThreadPage() {
     try {
       await createComment({
         discussionId: discussionId as unknown as Id<"discussions">,
-        parentCommentId: parentCommentId as unknown as Id<"comments"> | undefined,
+        ...(parentCommentId !== undefined ? { parentCommentId: parentCommentId as unknown as Id<"comments"> } : {}),
         body: replyBody,
       });
       setReplyBody("");

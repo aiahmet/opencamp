@@ -29,9 +29,25 @@ export function getNextMidnightBerlinMs(): number {
   const nowInBerlin = formatInTimeZone(new Date(), BERLIN_TIMEZONE, "yyyy-MM-dd");
   const tomorrowMidnight = addDays(new Date(nowInBerlin), 1);
   const tomorrowInBerlin = formatInTimeZone(tomorrowMidnight, BERLIN_TIMEZONE, "yyyy-MM-dd HH:mm:ss");
-  const [datePart, timePart] = tomorrowInBerlin.split(" ");
-  const [year, month, day] = datePart.split("-").map(Number);
-  const [hour, minute, second] = timePart.split(":").map(Number);
+  const parts = tomorrowInBerlin.split(" ");
+  const datePart = parts[0];
+  const timePart = parts[1];
+  if (!datePart || !timePart) {
+    throw new Error("Invalid date format");
+  }
+  const dateParts = datePart.split("-").map(Number);
+  const timeParts = timePart.split(":").map(Number);
+  const year = dateParts[0];
+  const month = dateParts[1];
+  const day = dateParts[2];
+  const hour = timeParts[0];
+  const minute = timeParts[1];
+  const second = timeParts[2];
+
+  if (year === undefined || month === undefined || day === undefined ||
+      hour === undefined || minute === undefined || second === undefined) {
+    throw new Error("Invalid date parts");
+  }
 
   return new Date(year, month - 1, day, hour, minute, second).getTime();
 }

@@ -115,8 +115,11 @@ export default function ProjectPage() {
 
   const handleFileContentChange = (index: number, newContent: string) => {
     const newFiles = [...files];
-    newFiles[index] = { ...newFiles[index], content: newContent };
-    setFiles(newFiles);
+    const currentFile = newFiles[index];
+    if (currentFile) {
+      newFiles[index] = { path: currentFile.path, content: newContent };
+      setFiles(newFiles);
+    }
   };
 
   const handleRun = async () => {
@@ -391,7 +394,7 @@ export default function ProjectPage() {
               </div>
 
               {/* Monaco Editor */}
-              {files.length > 0 && selectedFileIndex !== null && (
+              {files.length > 0 && selectedFileIndex !== null && files[selectedFileIndex] !== undefined && (
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <h3 className="text-sm font-medium text-gray-700">

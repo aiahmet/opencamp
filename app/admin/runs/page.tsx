@@ -26,11 +26,11 @@ export default function AdminRunsPage() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [kindFilter, setKindFilter] = useState<string>("all");
   
-  const logs = useQuery(api.admin.listRecentExecutionLogs, {
+  const logs = useQuery(api.admin.listRecentExecutionLogs, statusFilter !== "all" || kindFilter !== "all" ? {
     limit: 100,
-    status: statusFilter !== "all" ? (statusFilter as ExecutionStatus) : undefined,
-    kind: kindFilter !== "all" ? (kindFilter as ExecutionKind) : undefined,
-  });
+    ...(statusFilter !== "all" ? { status: statusFilter as ExecutionStatus } : {}),
+    ...(kindFilter !== "all" ? { kind: kindFilter as ExecutionKind } : {}),
+  } : "skip");
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString();
@@ -152,7 +152,21 @@ export default function AdminRunsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {logs.map((log: ExecutionLog) => (
+                {logs.map((log) => {
+                  const logWithCorrectType: ExecutionLog = {
+                    _id: log._id,
+                    userHandle: log.userHandle,
+                    kind: log.kind,
+                    ...(log.itemTitle !== undefined ? { itemTitle: log.itemTitle } : {}),
+                    ...(log.projectTitle !== undefined ? { projectTitle: log.projectTitle } : {}),
+                    status: log.status,
+                    timingMs: log.timingMs,
+                    compileOk: log.compileOk,
+                    ...(log.testsFailedCount !== undefined ? { testsFailedCount: log.testsFailedCount } : {}),
+                    ...(log.errorMessage !== undefined ? { errorMessage: log.errorMessage } : {}),
+                    startedAt: log.startedAt,
+                  };
+                  return (
                   <tr key={log._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(log.startedAt)}
@@ -195,7 +209,8 @@ export default function AdminRunsPage() {
                       )}
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
                 {logs.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">

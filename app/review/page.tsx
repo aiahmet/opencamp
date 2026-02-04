@@ -97,7 +97,7 @@ export default function ReviewPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {reviewQueue.map((contribution: { _id: string; item: { title?: string; languageName?: string; trackSlug?: string; kind?: string } | null; author: { username?: string; email?: string } | null; status: string; submittedAt?: number; updatedAt: number }) => (
+                {reviewQueue.map((contribution) => (
                   <tr key={contribution._id}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">

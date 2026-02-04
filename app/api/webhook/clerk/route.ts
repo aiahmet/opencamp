@@ -69,7 +69,7 @@ export async function POST(req: Request) {
   // Apply rate limiting (always configured with Redis or in-memory fallback)
   const headerPayload = await headers();
   const ip = headerPayload.get("x-forwarded-for") ?? "anonymous";
-  const { success, limit, reset, remaining } = await ratelimit.limit(ip);
+  const { success, limit, reset, remaining } = await ratelimit!.limit(ip);
 
   if (!success) {
     return new Response("Too many requests", {
@@ -82,7 +82,6 @@ export async function POST(req: Request) {
     });
   }
 
-  const headerPayload = await headers();
   const svix_id = headerPayload.get("svix-id");
   const svix_timestamp = headerPayload.get("svix-timestamp");
   const svix_signature = headerPayload.get("svix-signature");
@@ -131,8 +130,8 @@ export async function POST(req: Request) {
       await convex.mutation(api.users.syncUser, {
         clerkUserId: id,
         email,
-        name,
-        imageUrl: image_url,
+        ...(name !== undefined ? { name } : {}),
+        ...(image_url !== undefined ? { imageUrl: image_url } : {}),
       });
     } catch (error) {
       console.error("Failed to sync user:", error);

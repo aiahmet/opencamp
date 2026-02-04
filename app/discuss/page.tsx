@@ -9,12 +9,12 @@ import { useState } from "react";
 export default function DiscussPage() {
   const [typeFilter, setTypeFilter] = useState<"help" | "showcase" | "general" | undefined>(undefined);
 
-  const discussions = useQuery(api.discussions.listDiscussionsByScope, {
+  const discussions = useQuery(api.discussions.listDiscussionsByScope, typeFilter !== undefined ? {
     scopeType: "global",
     scopeId: null,
     type: typeFilter,
     limit: 50,
-  });
+  } : "skip");
 
   const formatDate = (timestamp: number) => {
     return new Date(timestamp).toLocaleString();

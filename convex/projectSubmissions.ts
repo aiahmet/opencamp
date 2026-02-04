@@ -135,7 +135,6 @@ export const createAndRunProjectSubmission = action({
         await logExecution(ctx, {
           userId: user._id,
           kind: "project",
-          itemId: undefined,
           projectId: args.projectId,
           submissionId,
           startedAt: runStartTime,
@@ -144,7 +143,7 @@ export const createAndRunProjectSubmission = action({
           timingMs: submission.result.timingMs || 0,
           compileOk: submission.result.compile.ok,
           testsPassed: status === "passed",
-          testsFailedCount: testsFailedCount > 0 ? testsFailedCount : undefined,
+          ...(testsFailedCount > 0 ? { testsFailedCount } : {}),
         });
       }
 
@@ -168,7 +167,6 @@ export const createAndRunProjectSubmission = action({
       await logExecution(ctx, {
         userId: user._id,
         kind: "project",
-        itemId: undefined,
         projectId: args.projectId,
         submissionId,
         startedAt: runStartTime,
