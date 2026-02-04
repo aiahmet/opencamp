@@ -32,7 +32,10 @@ export async function checkAndIncrement(
     if (existing.count >= limit) {
       // Rate limit exceeded
       const retryAfterMs = existing.windowStart + windowMs - now;
-      throwFriendly("RATE_LIMITED", { retryAfterMs });
+      throwFriendly({
+        code: "RATE_LIMITED",
+        retryAfterMs
+      });
     }
 
     await ctx.db.patch(existing._id, {

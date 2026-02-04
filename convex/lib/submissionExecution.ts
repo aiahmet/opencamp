@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation } from "../_generated/server";
-import { ExecutionLimitError } from "./limits";
+import { ExecutionLimitError, RateLimitDetails, QuotaExceededDetails } from "./limits";
 import { Id } from "../_generated/dataModel";
 
 // Shared execution log arguments value type
@@ -104,10 +104,11 @@ export async function logExecution(
 export function createRateLimitedResponse(
   error: ExecutionLimitError
 ): { blocked: true; code: string; retryAfterMs: number; message: string } {
+  const details = error.details as RateLimitDetails;
   return {
     blocked: true,
     code: error.code,
-    retryAfterMs: error.details.retryAfterMs,
+    retryAfterMs: details.retryAfterMs,
     message: error.message,
   };
 }
@@ -116,10 +117,11 @@ export function createRateLimitedResponse(
 export function createQuotaExceededResponse(
   error: ExecutionLimitError
 ): { blocked: true; code: string; resetsAtMs: number; message: string } {
+  const details = error.details as QuotaExceededDetails;
   return {
     blocked: true,
     code: error.code,
-    resetsAtMs: error.details.resetsAtMs,
+    resetsAtMs: details.resetsAtMs,
     message: error.message,
   };
 }

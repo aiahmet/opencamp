@@ -18,10 +18,9 @@ export async function checkAndIncrementDailyRuns(
   if (existing) {
     if (existing.runs >= LIMITS.dailyRunLimit) {
       // Quota exceeded
-      throwFriendly("QUOTA_EXCEEDED", { 
-        resetsAtMs: getNextMidnightBerlinMs(),
-        runsUsed: existing.runs,
-        runsLimit: LIMITS.dailyRunLimit 
+      throwFriendly({
+        code: "QUOTA_EXCEEDED",
+        resetsAtMs: getNextMidnightBerlinMs()
       });
     }
 

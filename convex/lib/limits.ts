@@ -37,24 +37,39 @@ export function getNextMidnightBerlinMs(): number {
 }
 
 /**
+ * Specific detail interfaces for execution limit errors
+ */
+export interface RateLimitDetails {
+  code: "RATE_LIMITED";
+  retryAfterMs: number;
+}
+
+export interface QuotaExceededDetails {
+  code: "QUOTA_EXCEEDED";
+  resetsAtMs: number;
+}
+
+export type ExecutionLimitDetails = RateLimitDetails | QuotaExceededDetails;
+
+/**
  * Standard error types for consistent error handling across the application
  */
 
 // Execution limit errors (rate limiting, quota exceeded)
 export class ExecutionLimitError extends Error {
-  code: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  details: Record<string, any>;
+  details: ExecutionLimitDetails;
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  constructor(code: "RATE_LIMITED" | "QUOTA_EXCEEDED", details: Record<string, any>) {
-    super(code === "RATE_LIMITED"
+  constructor(details: ExecutionLimitDetails) {
+    super(details.code === "RATE_LIMITED"
       ? `Rate limit exceeded. Try again in ${Math.ceil(details.retryAfterMs / 1000)}s.`
       : `Daily run limit reached. Resets at ${new Date(details.resetsAtMs).toLocaleTimeString()}.`
     );
-    this.code = code;
     this.details = details;
     this.name = "ExecutionLimitError";
+  }
+
+  get code(): string {
+    return this.details.code;
   }
 }
 
@@ -98,7 +113,6 @@ export class BadRequestError extends Error {
   }
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export function throwFriendly(code: "RATE_LIMITED" | "QUOTA_EXCEEDED", details: Record<string, any>): never {
-  throw new ExecutionLimitError(code, details);
+export function throwFriendly(details: ExecutionLimitDetails): never {
+  throw new ExecutionLimitError(details);
 }
