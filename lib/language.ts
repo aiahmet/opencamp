@@ -41,7 +41,7 @@ export const LANGUAGE_EXTENSIONS: Record<string, string> = {
 
   // Kotlin
   kotlin: ".kt",
-  kotlin_script: ".kts",
+  kotlinScript: ".kts",
 
   // Shell
   shell: ".sh",
