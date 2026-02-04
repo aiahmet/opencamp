@@ -76,33 +76,33 @@ export const LANGUAGE_EXTENSIONS: Record<string, string> = {
  * File templates for different languages
  */
 export const LANGUAGE_FILE_TEMPLATES: Record<string, (fileName: string) => string> = {
-  python: (fileName) => `# ${fileName}\n\n# TODO: Implement\n`,
-  java: (fileName) => `public class ${fileName} {\n  // TODO: Implement\n}\n`,
-  javascript: (fileName) => `// ${fileName}\n\n// TODO: Implement\n`,
-  typescript: (fileName) => `// ${fileName}\n\n// TODO: Implement\n`,
-  go: (fileName) => `package main\n\n// ${fileName}\n// TODO: Implement\n`,
-  rust: (fileName) => `// ${fileName}\n\n// TODO: Implement\n`,
-  c: (fileName) => `/* ${fileName} */\n\n// TODO: Implement\n`,
-  cpp: (fileName) => `// ${fileName}\n\n// TODO: Implement\n`,
-  csharp: (fileName) => `// ${fileName}\n\n// TODO: Implement\n`,
-  ruby: (fileName) => `# ${fileName}\n\n# TODO: Implement\n`,
-  php: (fileName) => `<?php\n// ${fileName}\n// TODO: Implement\n`,
-  swift: (fileName) => `// ${fileName}\n\n// TODO: Implement\n`,
-  kotlin: (fileName) => `// ${fileName}\n\n// TODO: Implement\n`,
-  shell: (fileName) => `#!/bin/bash\n# ${fileName}\n\n# TODO: Implement\n`,
-  powershell: (fileName) => `# ${fileName}\n\n# TODO: Implement\n`,
-  html: (fileName) => `<!-- ${fileName} -->\n\n<!-- TODO: Implement -->\n`,
-  css: (fileName) => `/* ${fileName} */\n\n/* TODO: Implement */\n`,
-  scss: (fileName) => `// ${fileName}\n\n// TODO: Implement\n`,
-  less: (fileName) => `/* ${fileName} */\n\n/* TODO: Implement */\n`,
-  json: () => `{\n  // TODO: Implement\n}\n`,
-  xml: (fileName) => `<!-- ${fileName} -->\n\n<!-- TODO: Implement -->\n`,
-  yaml: () => `# TODO: Implement\n`,
-  toml: () => `# TODO: Implement\n`,
-  markdown: (fileName) => `# ${fileName}\n\nTODO: Implement\n`,
-  sql: (fileName) => `-- ${fileName}\n\n-- TODO: Implement\n`,
-  dart: (fileName) => `// ${fileName}\n\n// TODO: Implement\n`,
-  plaintext: (fileName) => `// ${fileName}\n\n// TODO: Implement\n`,
+  python: (fileName) => `# ${fileName}\n\n# Write your code here\n`,
+  java: (fileName) => `public class ${fileName} {\n  // Write your code here\n}\n`,
+  javascript: (fileName) => `// ${fileName}\n\n// Write your code here\n`,
+  typescript: (fileName) => `// ${fileName}\n\n// Write your code here\n`,
+  go: (fileName) => `package main\n\n// ${fileName}\n// Write your code here\n`,
+  rust: (fileName) => `// ${fileName}\n\n// Write your code here\n`,
+  c: (fileName) => `/* ${fileName} */\n\n// Write your code here\n`,
+  cpp: (fileName) => `// ${fileName}\n\n// Write your code here\n`,
+  csharp: (fileName) => `// ${fileName}\n\n// Write your code here\n`,
+  ruby: (fileName) => `# ${fileName}\n\n# Write your code here\n`,
+  php: (fileName) => `<?php\n// ${fileName}\n// Write your code here\n`,
+  swift: (fileName) => `// ${fileName}\n\n// Write your code here\n`,
+  kotlin: (fileName) => `// ${fileName}\n\n// Write your code here\n`,
+  shell: (fileName) => `#!/bin/bash\n# ${fileName}\n\n# Write your code here\n`,
+  powershell: (fileName) => `# ${fileName}\n\n# Write your code here\n`,
+  html: (fileName) => `<!-- ${fileName} -->\n\n<!-- Write your code here -->\n`,
+  css: (fileName) => `/* ${fileName} */\n\n/* Write your code here */\n`,
+  scss: (fileName) => `// ${fileName}\n\n// Write your code here\n`,
+  less: (fileName) => `/* ${fileName} */\n\n/* Write your code here */\n`,
+  json: () => `{\n  // Write your code here\n}\n`,
+  xml: (fileName) => `<!-- ${fileName} -->\n\n<!-- Write your code here -->\n`,
+  yaml: () => `# Write your code here\n`,
+  toml: () => `# Write your code here\n`,
+  markdown: (fileName) => `# ${fileName}\n\nWrite your code here\n`,
+  sql: (fileName) => `-- ${fileName}\n\n-- Write your code here\n`,
+  dart: (fileName) => `// ${fileName}\n\n// Write your code here\n`,
+  plaintext: (fileName) => `// ${fileName}\n\n// Write your code here\n`,
 } as const;
 
 /**
@@ -122,7 +122,7 @@ export function getFileExtension(monacoLanguageId: string): string {
  */
 export function getFileTemplate(monacoLanguageId: string, fileName: string): string {
   const template = LANGUAGE_FILE_TEMPLATES[monacoLanguageId];
-  return template ? template(fileName) : `// ${fileName}\n\n// TODO: Implement\n`;
+  return template ? template(fileName) : `// ${fileName}\n\n// Write your code here\n`;
 }
 
 /**
