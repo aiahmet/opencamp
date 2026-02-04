@@ -9,6 +9,12 @@ import {
   RunPythonRequest,
   RunPythonProjectRequest,
 } from "./types";
+import {
+  RunJavaRequestSchema,
+  RunJavaProjectRequestSchema,
+  RunPythonRequestSchema,
+  RunPythonProjectRequestSchema,
+} from "./validation";
 
 const app = express();
 const PORT = process.env.PORT || 4001;
@@ -27,18 +33,17 @@ app.post("/health", (_req, res) => {
 
 app.post<unknown, RunJavaResponse, RunJavaRequest>("/run/java", async (req, res) => {
   try {
-    const { code, testSuite, limits } = req.body;
-
-    if (!code || !testSuite) {
+    const validationResult = RunJavaRequestSchema.safeParse(req.body);
+    if (!validationResult.success) {
       res.status(400).json({
         passed: false,
-        compile: { ok: false, stderr: "Missing code or testSuite" },
+        compile: { ok: false, stderr: "Invalid request: " + validationResult.error.issues[0].message },
         tests: [],
         timingMs: 0,
       });
       return;
     }
-
+    const { code, testSuite, limits } = validationResult.data;
     const result = await runJavaInDocker(code, testSuite, limits);
     res.json(result);
   } catch (error) {
@@ -55,18 +60,17 @@ app.post<unknown, RunJavaResponse, RunJavaRequest>("/run/java", async (req, res)
 
 app.post<unknown, RunJavaResponse, RunJavaProjectRequest>("/run/java-project", async (req, res) => {
   try {
-    const { files, testSuite, limits } = req.body;
-
-    if (!files || !testSuite) {
+    const validationResult = RunJavaProjectRequestSchema.safeParse(req.body);
+    if (!validationResult.success) {
       res.status(400).json({
         passed: false,
-        compile: { ok: false, stderr: "Missing files or testSuite" },
+        compile: { ok: false, stderr: "Invalid request: " + validationResult.error.issues[0].message },
         tests: [],
         timingMs: 0,
       });
       return;
     }
-
+    const { files, testSuite, limits } = validationResult.data;
     const result = await runJavaProjectInDocker(files, testSuite, limits);
     res.json(result);
   } catch (error) {
@@ -83,18 +87,17 @@ app.post<unknown, RunJavaResponse, RunJavaProjectRequest>("/run/java-project", a
 
 app.post<unknown, RunJavaResponse, RunPythonRequest>("/run/python", async (req, res) => {
   try {
-    const { code, testSuite, limits } = req.body as RunPythonRequest;
-
-    if (!code || !testSuite) {
+    const validationResult = RunPythonRequestSchema.safeParse(req.body);
+    if (!validationResult.success) {
       res.status(400).json({
         passed: false,
-        compile: { ok: false, stderr: "Missing code or testSuite" },
+        compile: { ok: false, stderr: "Invalid request: " + validationResult.error.issues[0].message },
         tests: [],
         timingMs: 0,
       });
       return;
     }
-
+    const { code, testSuite, limits } = validationResult.data;
     const result = await runPythonInDocker(code, testSuite, limits);
     res.json(result);
   } catch (error) {
@@ -111,18 +114,17 @@ app.post<unknown, RunJavaResponse, RunPythonRequest>("/run/python", async (req, 
 
 app.post<unknown, RunJavaResponse, RunPythonProjectRequest>("/run/python-project", async (req, res) => {
   try {
-    const { files, testSuite, limits } = req.body as RunPythonProjectRequest;
-
-    if (!files || !testSuite) {
+    const validationResult = RunPythonProjectRequestSchema.safeParse(req.body);
+    if (!validationResult.success) {
       res.status(400).json({
         passed: false,
-        compile: { ok: false, stderr: "Missing files or testSuite" },
+        compile: { ok: false, stderr: "Invalid request: " + validationResult.error.issues[0].message },
         tests: [],
         timingMs: 0,
       });
       return;
     }
-
+    const { files, testSuite, limits } = validationResult.data;
     const result = await runPythonProjectInDocker(files, testSuite, limits);
     res.json(result);
   } catch (error) {
