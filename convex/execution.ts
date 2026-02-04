@@ -3,6 +3,7 @@ import { internalAction, internalMutation, internalQuery } from "./_generated/se
 import { internal } from "./_generated/api";
 import { LIMITS } from "./lib/limits";
 import { parseRunnerResponse } from "./lib/runnerSchema";
+import { Id } from "./_generated/dataModel";
 
 /**
  * Validates that a test suite belongs to the specified language.
@@ -10,12 +11,12 @@ import { parseRunnerResponse } from "./lib/runnerSchema";
  * Used when creating/updating projects or curriculum items with test suites.
  */
 export async function validateTestSuiteLanguage(
-  ctx: { runQuery: (func: any, args: any) => Promise<any> },
-  testSuiteId: string,
+  ctx: { runQuery: (func: any, args: any) => Promise<any> }, // eslint-disable-line @typescript-eslint/no-explicit-any
+  testSuiteId: Id<"testSuites">,
   expectedLanguageId: string
 ): Promise<void> {
   const testSuite = await ctx.runQuery(internal.execution.getTestSuiteById, {
-    testSuiteId: testSuiteId as any,
+    testSuiteId,
   });
 
   if (!testSuite) {

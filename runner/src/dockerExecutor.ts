@@ -28,15 +28,15 @@ const execAsyncCustom = (
   });
 };
 
-const DEFAULT_LIMITS = {
-  cpu: 0.5,
-  memoryMb: 256,
-  timeoutMs: 10000,
-  outputLimitBytes: 262144, // 256KB
+type Limits = {
+  cpu: number;
+  memoryMb: number;
+  timeoutMs: number;
+  outputLimitBytes: number;
 };
 
 // Read limits from environment variables with defaults
-const getConfiguredLimits = (): typeof DEFAULT_LIMITS => ({
+const getConfiguredLimits = (): Limits => ({
   cpu: parseFloat(process.env.RUNNER_CPU_LIMITS || "0.5"),
   memoryMb: parseInt(process.env.RUNNER_MEMORY_MB || "256", 10),
   timeoutMs: parseInt(process.env.RUNNER_TIMEOUT_MS || "10000", 10),
@@ -96,7 +96,7 @@ function logExecution(kind: string, result: RunJavaResponse, timingMs: number, c
 export async function runJavaInDocker(
   code: string,
   testSuite: JavaTestSuite,
-  limits?: Partial<typeof DEFAULT_LIMITS>
+  limits?: Partial<Limits>
 ): Promise<RunJavaResponse> {
   const startTime = Date.now();
   const actualLimits = { ...getConfiguredLimits(), ...limits };
@@ -268,7 +268,7 @@ export async function runJavaInDocker(
 export async function runJavaProjectInDocker(
   files: JavaFile[],
   testSuite: JavaTestSuite,
-  limits?: Partial<typeof DEFAULT_LIMITS>
+  limits?: Partial<Limits>
 ): Promise<RunJavaResponse> {
   const startTime = Date.now();
   const actualLimits = { ...getConfiguredLimits(), ...limits };

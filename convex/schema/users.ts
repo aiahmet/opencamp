@@ -1,4 +1,5 @@
-import { defineTable, v } from "convex/server";
+import { defineTable } from "convex/server";
+import { v } from "convex/values";
 
 export const userTables = {
   users: defineTable({

@@ -58,9 +58,59 @@ const DEFAULT_LIMITS = {
     cpu: 0.5,
     memoryMb: 256,
     timeoutMs: 10000,
+    outputLimitBytes: 262144, // 256KB
 };
+// Read limits from environment variables with defaults
+const getConfiguredLimits = () => ({
+    cpu: parseFloat(process.env.RUNNER_CPU_LIMITS || "0.5"),
+    memoryMb: parseInt(process.env.RUNNER_MEMORY_MB || "256", 10),
+    timeoutMs: parseInt(process.env.RUNNER_TIMEOUT_MS || "10000", 10),
+    outputLimitBytes: parseInt(process.env.RUNNER_OUTPUT_LIMIT_BYTES || "262144", 10),
+});
+function truncateOutput(stdout, stderr, limitBytes) {
+    const encoder = new TextEncoder();
+    let outputTruncated = false;
+    const stdoutBytes = encoder.encode(stdout).length;
+    const stderrBytes = encoder.encode(stderr).length;
+    const totalBytes = stdoutBytes + stderrBytes;
+    if (totalBytes > limitBytes) {
+        outputTruncated = true;
+        // Proportionally reduce both outputs
+        if (totalBytes > 0) {
+            const stdoutRatio = stdoutBytes / totalBytes;
+            const stderrRatio = stderrBytes / totalBytes;
+            const maxStdoutBytes = Math.floor((limitBytes * stdoutRatio) - 1024); // Reserve space for message
+            const maxStderrBytes = Math.floor((limitBytes * stderrRatio) - 1024);
+            if (stdoutBytes > maxStdoutBytes && maxStdoutBytes > 0) {
+                const encoder = new TextEncoder();
+                const decoder = new TextDecoder();
+                const truncated = decoder.decode(encoder.encode(stdout).slice(0, maxStdoutBytes));
+                stdout = truncated + "\n\n[output truncated due to size limits]";
+            }
+            if (stderrBytes > maxStderrBytes && maxStderrBytes > 0) {
+                const encoder = new TextEncoder();
+                const decoder = new TextDecoder();
+                const truncated = decoder.decode(encoder.encode(stderr).slice(0, maxStderrBytes));
+                stderr = truncated + "\n\n[output truncated due to size limits]";
+            }
+        }
+    }
+    return { stdout, stderr, outputTruncated };
+}
+function logExecution(kind, result, timingMs, compileOk) {
+    const logEntry = {
+        kind,
+        timingMs,
+        compileOk,
+        passed: result.passed,
+        outputTruncated: result.outputTruncated || false,
+        errorType: result.compile.ok ? undefined : (result.compile.stderr?.includes("Time limit exceeded") ? "timeout" : "compile"),
+    };
+    console.log(JSON.stringify(logEntry));
+}
 async function runJavaInDocker(code, testSuite, limits) {
     const startTime = Date.now();
+    const actualLimits = { ...getConfiguredLimits(), ...limits };
     const result = {
         passed: false,
         compile: { ok: false },
@@ -68,6 +118,7 @@ async function runJavaInDocker(code, testSuite, limits) {
         stdout: "",
         stderr: "",
         timingMs: 0,
+        outputTruncated: false,
     };
     // Check if Docker is available
     try {
@@ -76,6 +127,7 @@ async function runJavaInDocker(code, testSuite, limits) {
     catch {
         result.compile.stderr = "Docker not installed or not available";
         result.timingMs = Date.now() - startTime;
+        logExecution("challenge", result, result.timingMs, false);
         return result;
     }
     // Create temporary workspace
@@ -94,7 +146,6 @@ async function runJavaInDocker(code, testSuite, limits) {
         await fs.writeFile(testRunnerPath, testRunnerCode);
         await fs.chmod(testRunnerPath, 0o644);
         console.log("Generated TestRunner.java:", testRunnerCode.substring(0, 200) + "...");
-        const actualLimits = { ...DEFAULT_LIMITS, ...limits };
         // Run Docker container with security constraints
         const dockerCommand = [
             "docker", "run", "--rm",
@@ -104,27 +155,63 @@ async function runJavaInDocker(code, testSuite, limits) {
             "--pids-limit=256",
             "--security-opt=no-new-privileges",
             "--cap-drop=ALL",
+            "--read-only",
+            "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=64m",
+            "--tmpfs", "/var/tmp:rw,nosuid,nodev,noexec,size=64m",
+            "--user", "1000:1000",
+            "--workdir", "/work",
             "-v", `${tempDir}:/work:rw`,
-            "-w", "/work",
             "eclipse-temurin:21-jdk",
             "sh", "-c",
-            "\"javac Solution.java TestRunner.java && java TestRunner\""
+            `"javac Solution.java TestRunner.java && java TestRunner"`
         ];
-        const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error("Time limit exceeded")), actualLimits.timeoutMs);
-        });
         const fullCommand = dockerCommand.join(" ");
         console.log("Executing Docker command:", fullCommand);
-        const execPromise = execAsyncCustom(fullCommand, {
-            maxBuffer: 10 * 1024 * 1024, // 10MB
+        // Set up timeout handling
+        let timedOut = false;
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+                timedOut = true;
+                reject(new Error("Time limit exceeded"));
+            }, actualLimits.timeoutMs);
         });
-        const { stdout, stderr } = await Promise.race([execPromise, timeoutPromise]);
-        result.stdout = stdout;
-        result.stderr = stderr;
+        const execPromise = execAsyncCustom(fullCommand, {
+            maxBuffer: actualLimits.outputLimitBytes * 2, // Allow some buffer for overhead
+        });
+        let stdout;
+        let stderr;
+        try {
+            const execResult = await Promise.race([execPromise, timeoutPromise]);
+            stdout = execResult.stdout;
+            stderr = execResult.stderr;
+        }
+        catch (timeoutError) {
+            if (timedOut || (timeoutError instanceof Error && timeoutError.message === "Time limit exceeded")) {
+                // Kill the docker container if timed out
+                try {
+                    await execAsync(`docker ps -q --filter "ancestor=eclipse-temurin:21-jdk" | head -1 | xargs -r docker kill 2>/dev/null || true`);
+                }
+                catch {
+                    // Ignore kill errors
+                }
+                result.compile.ok = false;
+                result.compile.stderr = "Time limit exceeded";
+                result.stderr = "Time limit exceeded";
+                result.timingMs = actualLimits.timeoutMs;
+                logExecution("challenge", result, result.timingMs, false);
+                return result;
+            }
+            throw timeoutError;
+        }
+        // Truncate output if needed
+        const truncated = truncateOutput(stdout, stderr, actualLimits.outputLimitBytes);
+        result.stdout = truncated.stdout;
+        result.stderr = truncated.stderr;
+        result.outputTruncated = truncated.outputTruncated;
         // Check if compilation succeeded
         if (stderr.includes("error:") || stdout.includes("error:")) {
             result.compile.ok = false;
-            result.compile.stderr = stderr || stdout;
+            result.compile.stderr = result.stderr;
         }
         else {
             result.compile.ok = true;
@@ -177,10 +264,12 @@ async function runJavaInDocker(code, testSuite, limits) {
         }
     }
     result.timingMs = Date.now() - startTime;
+    logExecution("challenge", result, result.timingMs, result.compile.ok);
     return result;
 }
 async function runJavaProjectInDocker(files, testSuite, limits) {
     const startTime = Date.now();
+    const actualLimits = { ...getConfiguredLimits(), ...limits };
     const result = {
         passed: false,
         compile: { ok: false },
@@ -188,6 +277,7 @@ async function runJavaProjectInDocker(files, testSuite, limits) {
         stdout: "",
         stderr: "",
         timingMs: 0,
+        outputTruncated: false,
     };
     // Validate files
     const MAX_FILES = 30;
@@ -195,6 +285,7 @@ async function runJavaProjectInDocker(files, testSuite, limits) {
     if (files.length > MAX_FILES) {
         result.compile.stderr = `Too many files (max ${MAX_FILES})`;
         result.timingMs = Date.now() - startTime;
+        logExecution("project", result, result.timingMs, false);
         return result;
     }
     let totalSize = 0;
@@ -204,11 +295,13 @@ async function runJavaProjectInDocker(files, testSuite, limits) {
         if (!pathValidation.valid) {
             result.compile.stderr = `Invalid file path "${file.path}": ${pathValidation.error}`;
             result.timingMs = Date.now() - startTime;
+            logExecution("project", result, result.timingMs, false);
             return result;
         }
         if (seenPaths.has(file.path)) {
             result.compile.stderr = `Duplicate file path: "${file.path}"`;
             result.timingMs = Date.now() - startTime;
+            logExecution("project", result, result.timingMs, false);
             return result;
         }
         seenPaths.add(file.path);
@@ -216,6 +309,7 @@ async function runJavaProjectInDocker(files, testSuite, limits) {
         if (totalSize > MAX_FILE_SIZE) {
             result.compile.stderr = `Total file size exceeds ${MAX_FILE_SIZE} bytes`;
             result.timingMs = Date.now() - startTime;
+            logExecution("project", result, result.timingMs, false);
             return result;
         }
     }
@@ -226,6 +320,7 @@ async function runJavaProjectInDocker(files, testSuite, limits) {
     catch {
         result.compile.stderr = "Docker not installed or not available";
         result.timingMs = Date.now() - startTime;
+        logExecution("project", result, result.timingMs, false);
         return result;
     }
     // Create temporary workspace
@@ -249,7 +344,6 @@ async function runJavaProjectInDocker(files, testSuite, limits) {
         await fs.writeFile(testRunnerPath, testRunnerCode);
         await fs.chmod(testRunnerPath, 0o644);
         console.log("Generated TestRunner.java:", testRunnerCode.substring(0, 200) + "...");
-        const actualLimits = { ...DEFAULT_LIMITS, ...limits };
         // Find all .java files
         const javaFiles = [];
         async function findJavaFiles(dir) {
@@ -275,27 +369,63 @@ async function runJavaProjectInDocker(files, testSuite, limits) {
             "--pids-limit=256",
             "--security-opt=no-new-privileges",
             "--cap-drop=ALL",
+            "--read-only",
+            "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=64m",
+            "--tmpfs", "/var/tmp:rw,nosuid,nodev,noexec,size=64m",
+            "--user", "1000:1000",
+            "--workdir", "/work",
             "-v", `${tempDir}:/work:rw`,
-            "-w", "/work",
             "eclipse-temurin:21-jdk",
             "sh", "-c",
             `"javac ${javaFiles.join(" ")} && java TestRunner"`
         ];
-        const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error("Time limit exceeded")), actualLimits.timeoutMs);
-        });
         const fullCommand = dockerCommand.join(" ");
         console.log("Executing Docker command:", fullCommand);
-        const execPromise = execAsyncCustom(fullCommand, {
-            maxBuffer: 10 * 1024 * 1024, // 10MB
+        // Set up timeout handling
+        let timedOut = false;
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => {
+                timedOut = true;
+                reject(new Error("Time limit exceeded"));
+            }, actualLimits.timeoutMs);
         });
-        const { stdout, stderr } = await Promise.race([execPromise, timeoutPromise]);
-        result.stdout = stdout;
-        result.stderr = stderr;
+        const execPromise = execAsyncCustom(fullCommand, {
+            maxBuffer: actualLimits.outputLimitBytes * 2,
+        });
+        let stdout;
+        let stderr;
+        try {
+            const execResult = await Promise.race([execPromise, timeoutPromise]);
+            stdout = execResult.stdout;
+            stderr = execResult.stderr;
+        }
+        catch (timeoutError) {
+            if (timedOut || (timeoutError instanceof Error && timeoutError.message === "Time limit exceeded")) {
+                // Kill the docker container if timed out
+                try {
+                    await execAsync(`docker ps -q --filter "ancestor=eclipse-temurin:21-jdk" | head -1 | xargs -r docker kill 2>/dev/null || true`);
+                }
+                catch {
+                    // Ignore kill errors
+                }
+                result.compile.ok = false;
+                result.compile.stderr = "Time limit exceeded";
+                result.stderr = "Time limit exceeded";
+                result.timingMs = actualLimits.timeoutMs;
+                logExecution("project", result, result.timingMs, false);
+                return result;
+            }
+            throw timeoutError;
+        }
+        // Truncate output if needed
+        const truncated = truncateOutput(stdout, stderr, actualLimits.outputLimitBytes);
+        result.stdout = truncated.stdout;
+        result.stderr = truncated.stderr;
+        result.outputTruncated = truncated.outputTruncated;
         // Check if compilation succeeded
         if (stderr.includes("error:") || stdout.includes("error:")) {
             result.compile.ok = false;
-            result.compile.stderr = stderr || stdout;
+            result.compile.stderr = result.stderr;
         }
         else {
             result.compile.ok = true;
@@ -348,6 +478,7 @@ async function runJavaProjectInDocker(files, testSuite, limits) {
         }
     }
     result.timingMs = Date.now() - startTime;
+    logExecution("project", result, result.timingMs, result.compile.ok);
     return result;
 }
 function validateFilePath(pathStr) {

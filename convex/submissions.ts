@@ -125,8 +125,6 @@ export const createAndRunSubmission = action({
       throw new Error("User not found");
     }
 
-    const now = Date.now();
-
     // 1) Check rate limit using shared helper
     const rateLimitResult = await checkRateLimit(ctx, user._id);
     if (!rateLimitResult.success) {

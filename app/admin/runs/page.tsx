@@ -5,20 +5,6 @@ import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useState } from "react";
 
-type ExecutionLog = {
-  _id: string;
-  userHandle: string;
-  kind: string;
-  itemTitle?: string;
-  projectTitle?: string;
-  status: string;
-  timingMs: number;
-  compileOk: boolean;
-  testsFailedCount?: number;
-  errorMessage?: string;
-  startedAt: number;
-};
-
 type ExecutionStatus = "passed" | "failed" | "error" | "rate_limited" | "quota_exceeded";
 type ExecutionKind = "challenge" | "project";
 
@@ -152,21 +138,7 @@ export default function AdminRunsPage() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {logs.map((log) => {
-                  const logWithCorrectType: ExecutionLog = {
-                    _id: log._id,
-                    userHandle: log.userHandle,
-                    kind: log.kind,
-                    ...(log.itemTitle !== undefined ? { itemTitle: log.itemTitle } : {}),
-                    ...(log.projectTitle !== undefined ? { projectTitle: log.projectTitle } : {}),
-                    status: log.status,
-                    timingMs: log.timingMs,
-                    compileOk: log.compileOk,
-                    ...(log.testsFailedCount !== undefined ? { testsFailedCount: log.testsFailedCount } : {}),
-                    ...(log.errorMessage !== undefined ? { errorMessage: log.errorMessage } : {}),
-                    startedAt: log.startedAt,
-                  };
-                  return (
+                {logs.map((log) => (
                   <tr key={log._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {formatDate(log.startedAt)}
@@ -209,8 +181,7 @@ export default function AdminRunsPage() {
                       )}
                     </td>
                   </tr>
-                  );
-                })}
+                ))}
                 {logs.length === 0 && (
                   <tr>
                     <td colSpan={7} className="px-6 py-4 text-center text-gray-500">

@@ -26,7 +26,7 @@ app.get("/health", (_req, res) => {
   res.json(response);
 });
 
-app.post("/health", (_req, res) => {
+app.post("/health", (req, res) => {
   const response: HealthResponse = { ok: true };
   res.json(response);
 });
@@ -48,7 +48,7 @@ app.post<unknown, RunJavaResponse, RunJavaRequest>("/run/java", async (req, res)
     const { code, testSuite, limits } = validationResult.data;
     // Filter out undefined values from limits to avoid exactOptionalPropertyTypes issues
     const filteredLimits = limits ? Object.fromEntries(
-      Object.entries(limits).filter(([_, v]) => v !== undefined)
+      Object.entries(limits).filter(([, v]) => v !== undefined)
     ) : {};
     const result = await runJavaInDocker(code, testSuite, filteredLimits as Parameters<typeof runJavaInDocker>[2]);
     res.json(result);
@@ -81,7 +81,7 @@ app.post<unknown, RunJavaResponse, RunJavaProjectRequest>("/run/java-project", a
     const { files, testSuite, limits } = validationResult.data;
     // Filter out undefined values from limits to avoid exactOptionalPropertyTypes issues
     const filteredLimits = limits ? Object.fromEntries(
-      Object.entries(limits).filter(([_, v]) => v !== undefined)
+      Object.entries(limits).filter(([, v]) => v !== undefined)
     ) : {};
     const result = await runJavaProjectInDocker(files, testSuite, filteredLimits as Parameters<typeof runJavaProjectInDocker>[2]);
     res.json(result);
@@ -114,7 +114,7 @@ app.post<unknown, RunJavaResponse, RunPythonRequest>("/run/python", async (req, 
     const { code, testSuite, limits } = validationResult.data;
     // Filter out undefined values from limits to avoid exactOptionalPropertyTypes issues
     const filteredLimits = limits ? Object.fromEntries(
-      Object.entries(limits).filter(([_, v]) => v !== undefined)
+      Object.entries(limits).filter(([, v]) => v !== undefined)
     ) : {};
     const result = await runPythonInDocker(code, testSuite, filteredLimits as Parameters<typeof runPythonInDocker>[2]);
     res.json(result);
@@ -147,7 +147,7 @@ app.post<unknown, RunJavaResponse, RunPythonProjectRequest>("/run/python-project
     const { files, testSuite, limits } = validationResult.data;
     // Filter out undefined values from limits to avoid exactOptionalPropertyTypes issues
     const filteredLimits = limits ? Object.fromEntries(
-      Object.entries(limits).filter(([_, v]) => v !== undefined)
+      Object.entries(limits).filter(([, v]) => v !== undefined)
     ) : {};
     const result = await runPythonProjectInDocker(files, testSuite, filteredLimits as Parameters<typeof runPythonProjectInDocker>[2]);
     res.json(result);

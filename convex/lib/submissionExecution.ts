@@ -1,5 +1,4 @@
 import { v } from "convex/values";
-import { internalMutation } from "../_generated/server";
 import { ExecutionLimitError, RateLimitDetails, QuotaExceededDetails } from "./limits";
 import { Id } from "../_generated/dataModel";
 
@@ -59,7 +58,7 @@ export interface RateLimitBlockedResult {
 
 // Check rate limit and return structured result
 export async function checkRateLimit(
-  ctx: { runMutation: (func: any, args: any) => Promise<any> },
+  ctx: { runMutation: (func: any, args: any) => Promise<any> }, // eslint-disable-line @typescript-eslint/no-explicit-any
   userId: Id<"users">
 ): Promise<RateLimitCheckResult | RateLimitBlockedResult> {
   try {
@@ -76,7 +75,7 @@ export async function checkRateLimit(
 
 // Check daily quota and return structured result
 export async function checkDailyQuota(
-  ctx: { runMutation: (func: any, args: any) => Promise<any> },
+  ctx: { runMutation: (func: any, args: any) => Promise<any> }, // eslint-disable-line @typescript-eslint/no-explicit-any
   userId: Id<"users">
 ): Promise<{ success: true; quotaInfo: { runsUsed: number; runsLimit: number; resetsAtMs: number } } | RateLimitBlockedResult> {
   try {
@@ -93,7 +92,7 @@ export async function checkDailyQuota(
 
 // Log execution - shared function
 export async function logExecution(
-  ctx: { runMutation: (func: any, args: any) => Promise<any> },
+  ctx: { runMutation: (func: any, args: any) => Promise<any> }, // eslint-disable-line @typescript-eslint/no-explicit-any
   logArgs: ExecutionLogArgs
 ): Promise<void> {
   const { internal } = await import("../_generated/api");
@@ -133,7 +132,7 @@ export function calculateFailedTestsCount(result: { tests?: Array<{ passed: bool
 
 // Log rate limited attempt
 export async function logRateLimitedAttempt(
-  ctx: { runMutation: (func: any, args: any) => Promise<any> },
+  ctx: { runMutation: (func: any, args: any) => Promise<any> }, // eslint-disable-line @typescript-eslint/no-explicit-any
   userId: Id<"users">,
   kind: "challenge" | "project",
   itemId: Id<"curriculumItems"> | undefined,
@@ -156,7 +155,7 @@ export async function logRateLimitedAttempt(
 
 // Log quota exceeded attempt
 export async function logQuotaExceededAttempt(
-  ctx: { runMutation: (func: any, args: any) => Promise<any> },
+  ctx: { runMutation: (func: any, args: any) => Promise<any> }, // eslint-disable-line @typescript-eslint/no-explicit-any
   userId: Id<"users">,
   kind: "challenge" | "project",
   itemId: Id<"curriculumItems"> | undefined,
