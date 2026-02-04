@@ -70,27 +70,51 @@ export async function POST(req: Request) {
   const eventType = evt.type;
 
   if (eventType === "user.created" || eventType === "user.updated") {
-    const { id, email_addresses, first_name, last_name, image_url } = evt.data;
-    const email = email_addresses[0].email_address;
-    const name = `${first_name || ""} ${last_name || ""}`.trim() || undefined;
+    try {
+      const { id, email_addresses, first_name, last_name, image_url } = evt.data;
 
-    await convex.mutation(api.users.syncUser, {
-      clerkUserId: id,
-      email,
-      name,
-      imageUrl: image_url,
-    });
+      // Add null check for email_addresses
+      if (!email_addresses || email_addresses.length === 0) {
+        console.error("User has no email addresses:", id);
+        return new Response("User has no email addresses", { status: 400 });
+      }
+
+      const email = email_addresses[0]?.email_address;
+      if (!email) {
+        console.error("Primary email is missing:", id);
+        return new Response("Primary email is missing", { status: 400 });
+      }
+
+      const name = `${first_name || ""} ${last_name || ""}`.trim() || undefined;
+
+      await convex.mutation(api.users.syncUser, {
+        clerkUserId: id,
+        email,
+        name,
+        imageUrl: image_url,
+      });
+    } catch (error) {
+      console.error("Failed to sync user:", error);
+      // Return 200 to prevent Clerk from retrying indefinitely
+      return new Response("User sync failed", { status: 200 });
+    }
   }
 
   if (eventType === "user.deleted") {
-    const { id } = evt.data;
-    if (!id) {
-      return new Response("Missing user ID", { status: 400 });
+    try {
+      const { id } = evt.data;
+      if (!id) {
+        console.error("User ID is missing in deletion event");
+        return new Response("User ID is missing", { status: 400 });
+      }
+      await convex.mutation(api.users.deleteUser, {
+        clerkUserId: id,
+      });
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      // Return 200 to prevent Clerk from retrying indefinitely
+      return new Response("User deletion failed", { status: 200 });
     }
-    // Delete user and associated data
-    await convex.mutation(api.users.deleteUser, {
-      clerkUserId: id,
-    });
   }
 
   return new Response("", { status: 200 });
