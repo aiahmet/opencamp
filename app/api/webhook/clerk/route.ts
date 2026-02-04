@@ -8,8 +8,9 @@ import { Redis } from "@upstash/redis";
 
 const convex = new ConvexHttpClient(process.env.NEXT_PUBLIC_CONVEX_URL!);
 
-// Initialize rate limiter if Redis is configured
+// Initialize rate limiter - use in-memory fallback if Redis not configured
 let ratelimit: Ratelimit | null = null;
+
 if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) {
   const redis = new Redis({
     url: process.env.UPSTASH_REDIS_REST_URL,
@@ -17,28 +18,68 @@ if (process.env.UPSTASH_REDIS_REST_URL && process.env.UPSTASH_REDIS_REST_TOKEN) 
   });
   ratelimit = new Ratelimit({
     redis,
-    limiter: Ratelimit.slidingWindow(10, "1 m"), // 10 requests per minute
+    limiter: Ratelimit.slidingWindow(10, "1 m"),
     analytics: true,
   });
+} else {
+  // Fallback to in-memory rate limiting (not distributed, but better than nothing)
+  const inMemoryCache = new Map<string, { count: number; resetAt: number }>();
+
+  ratelimit = {
+    async limit(identifier: string) {
+      const now = Date.now();
+      const windowMs = 60 * 1000; // 1 minute
+      const maxRequests = 10;
+
+      const record = inMemoryCache.get(identifier);
+
+      if (!record || now > record.resetAt) {
+        inMemoryCache.set(identifier, { count: 1, resetAt: now + windowMs });
+        return {
+          success: true,
+          limit: maxRequests,
+          remaining: maxRequests - 1,
+          reset: now + windowMs,
+        };
+      }
+
+      if (record.count >= maxRequests) {
+        return {
+          success: false,
+          limit: maxRequests,
+          remaining: 0,
+          reset: record.resetAt,
+        };
+      }
+
+      record.count++;
+      return {
+        success: true,
+        limit: maxRequests,
+        remaining: maxRequests - record.count,
+        reset: record.resetAt,
+      };
+    },
+  } as unknown as Ratelimit;
+
+  console.warn("Using in-memory rate limiting (not distributed). Configure UPSTASH_REDIS_* for production.");
 }
 
 export async function POST(req: Request) {
-  // Apply rate limiting if configured
-  if (ratelimit) {
-    const headerPayload = await headers();
-    const ip = headerPayload.get("x-forwarded-for") ?? "anonymous";
-    const { success, limit, reset, remaining } = await ratelimit.limit(ip);
+  // Apply rate limiting (always configured with Redis or in-memory fallback)
+  const headerPayload = await headers();
+  const ip = headerPayload.get("x-forwarded-for") ?? "anonymous";
+  const { success, limit, reset, remaining } = await ratelimit.limit(ip);
 
-    if (!success) {
-      return new Response("Too many requests", {
-        status: 429,
-        headers: {
-          "X-RateLimit-Limit": limit.toString(),
-          "X-RateLimit-Remaining": remaining.toString(),
-          "X-RateLimit-Reset": new Date(reset).toISOString(),
-        },
-      });
-    }
+  if (!success) {
+    return new Response("Too many requests", {
+      status: 429,
+      headers: {
+        "X-RateLimit-Limit": limit.toString(),
+        "X-RateLimit-Remaining": remaining.toString(),
+        "X-RateLimit-Reset": new Date(reset).toISOString(),
+      },
+    });
   }
 
   const headerPayload = await headers();
