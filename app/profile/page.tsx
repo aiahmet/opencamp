@@ -1,21 +1,33 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useState } from "react";
+import { Id } from "@/convex/_generated/dataModel";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 
 export default function ProfilePage() {
   const profile = useQuery(api.profile.myProfile);
   const completedTracks = useQuery(api.completion.listMyCompletedTracks);
   const certificates = useQuery(api.certificates.listMyCertificates);
+  const issueCertificateForTrack = useAction(api.certificates.issueCertificateForTrack);
 
   const [handle, setHandle] = useState("");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+  const [claimingTrackId, setClaimingTrackId] = useState<string | null>(null);
+  const [claimErrors, setClaimErrors] = useState<Record<string, string>>({});
+  const [claimCodes, setClaimCodes] = useState<Record<string, string>>({});
 
   const setHandleMutation = useMutation(api.profile.setMyHandle);
+  const certificatesByTrackId = useMemo(() => {
+    const map = new Map<Id<"tracks">, NonNullable<typeof certificates>[0]>();
+    certificates?.forEach((cert) => {
+      map.set(cert.trackId, cert);
+    });
+    return map;
+  }, [certificates]);
 
   if (profile === undefined || completedTracks === undefined || certificates === undefined) {
     return (
@@ -63,6 +75,22 @@ export default function ProfilePage() {
       month: "long",
       day: "numeric",
     }).format(new Date(timestamp));
+  };
+
+  const handleClaimCertificate = async (trackId: Id<"tracks">) => {
+    setClaimingTrackId(trackId);
+    setClaimErrors((prev) => ({ ...prev, [trackId]: "" }));
+    try {
+      const code = await issueCertificateForTrack({ trackId });
+      setClaimCodes((prev) => ({ ...prev, [trackId]: code }));
+    } catch (err) {
+      setClaimErrors((prev) => ({
+        ...prev,
+        [trackId]: err instanceof Error ? err.message : "Failed to claim certificate",
+      }));
+    } finally {
+      setClaimingTrackId((prev) => (prev === trackId ? null : prev));
+    }
   };
 
   return (
@@ -158,21 +186,70 @@ export default function ProfilePage() {
             <p className="text-gray-600">No completed tracks yet.</p>
           ) : (
             <div className="space-y-4">
-              {completedTracks.map((track) => (
-                <div key={track.trackId} className="border-b border-gray-200 pb-4 last:border-0">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {track.trackTitle}
-                      </h3>
-                      <p className="text-sm text-gray-600">{track.languageName}</p>
-                      <p className="text-sm text-gray-500">
-                        Completed on {formatDate(track.completedAt)}
-                      </p>
+              {completedTracks.map((track) => {
+                const existingCert = certificatesByTrackId.get(track.trackId);
+                const claimCode = claimCodes[track.trackId];
+                const claimError = claimErrors[track.trackId];
+                const certificateCode = claimCode || existingCert?.code;
+                return (
+                  <div key={track.trackId} className="border-b border-gray-200 pb-4 last:border-0">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:justify-between sm:items-start">
+                      <div>
+                        <h3 className="text-lg font-medium text-gray-900">
+                          {track.trackTitle}
+                        </h3>
+                        <p className="text-sm text-gray-600">{track.languageName}</p>
+                        <p className="text-sm text-gray-500">
+                          Completed on {formatDate(track.completedAt)}
+                        </p>
+                      </div>
+                      <div className="flex flex-col gap-2 sm:items-end">
+                        {certificateCode ? (
+                          <div className="flex gap-3">
+                            <Link
+                              href={`/certificate/${certificateCode}`}
+                              className="text-sm text-blue-600 hover:text-blue-800"
+                            >
+                              View certificate
+                            </Link>
+                            <Link
+                              href={`/verify/${certificateCode}`}
+                              className="text-sm text-blue-600 hover:text-blue-800"
+                            >
+                              Verify
+                            </Link>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => handleClaimCertificate(track.trackId)}
+                            disabled={claimingTrackId === track.trackId}
+                            className="px-3 py-1.5 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+                          >
+                            {claimingTrackId === track.trackId ? "Claiming..." : "Claim Certificate"}
+                          </button>
+                        )}
+                      </div>
                     </div>
+                    {claimError && (
+                      <div className="text-sm text-red-600 mt-2">
+                        {claimError}
+                      </div>
+                    )}
+                    {claimCode && (
+                      <div className="text-sm text-green-600 mt-2">
+                        Certificate issued.{" "}
+                        <Link
+                          href={`/certificate/${claimCode}`}
+                          className="underline"
+                        >
+                          View certificate
+                        </Link>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

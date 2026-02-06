@@ -5,66 +5,94 @@ import Link from "next/link";
 
 export default function Header() {
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-      <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6 lg:px-8">
-        <div className="flex items-center gap-8">
-          <Link href="/" className="text-xl font-bold text-gray-900">
-            OpenCamp
-          </Link>
+    <header className="sticky top-0 z-50 w-full px-3 pt-3 sm:px-4">
+      <div className="landing-nav-shell mx-auto max-w-6xl rounded-2xl">
+        <div className="flex items-center justify-between gap-3 px-3 py-3 sm:px-4">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="group inline-flex items-center gap-2.5 text-[var(--text-1)] transition-opacity hover:opacity-95">
+              <span className="landing-nav-brand-badge">OC</span>
+              <span className="hidden text-sm font-medium tracking-wide sm:inline">OpenCamp</span>
+            </Link>
+
+            <div className="hidden lg:inline-flex items-center gap-2 rounded-full border border-[var(--nav-chip-border)] bg-[var(--nav-chip-bg)] px-3 py-1 text-[0.66rem] uppercase tracking-[0.13em] text-[var(--text-3)]">
+              <span className="h-1.5 w-1.5 rounded-full bg-[var(--success)]" />
+              Java track beta
+            </div>
+          </div>
+
           <nav className="hidden md:flex items-center gap-1">
-            <Link
-              href="#features"
-              className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Learn
-            </Link>
-            <Link
-              href="#community"
-              className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Community
-            </Link>
-            <Link
-              href="#certificates"
-              className="px-3 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Certificates
-            </Link>
+            <NavItem href="#features">Learn</NavItem>
+            <NavItem href="#workflow">Workflow</NavItem>
+            <NavItem href="#community">Trust</NavItem>
+            <NavItem href="#certificates">Launch</NavItem>
           </nav>
+
+          <div className="flex items-center gap-2">
+            <SignedOut>
+              <Link
+                href="/sign-in"
+                className="landing-nav-muted hidden px-3 py-2 text-sm font-medium sm:inline-flex"
+              >
+                Sign in
+              </Link>
+              <Link
+                href="/sign-up"
+                className="landing-nav-primary inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold text-slate-950 transition-all duration-300"
+              >
+                Start free
+              </Link>
+            </SignedOut>
+            <SignedIn>
+              <Link
+                href="/learn"
+                className="landing-nav-muted inline-flex px-3 py-2 text-sm font-medium"
+              >
+                Dashboard
+              </Link>
+              <div className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-[var(--nav-chip-border)] bg-[var(--nav-chip-bg)]">
+                <UserButton
+                  appearance={{
+                    elements: {
+                      avatarBox: "w-7 h-7",
+                    },
+                  }}
+                />
+              </div>
+            </SignedIn>
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <SignedOut>
-            <Link
-              href="/sign-in"
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Sign in
-            </Link>
-            <Link
-              href="/sign-up"
-              className="px-4 py-2 text-sm font-medium text-white bg-gray-900 hover:bg-gray-800 rounded-md transition-colors"
-            >
-              Sign up
-            </Link>
-          </SignedOut>
-          <SignedIn>
-            <Link
-              href="/learn"
-              className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Dashboard
-            </Link>
-            <UserButton
-              appearance={{
-                elements: {
-                  avatarBox: "w-8 h-8",
-                },
-              }}
-            />
-          </SignedIn>
+        <div className="border-t border-[var(--nav-chip-border)] px-2 py-2 md:hidden">
+          <nav className="flex items-center gap-1 overflow-x-auto whitespace-nowrap [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <MobileNavItem href="#features">Learn</MobileNavItem>
+            <MobileNavItem href="#workflow">Workflow</MobileNavItem>
+            <MobileNavItem href="#community">Trust</MobileNavItem>
+            <MobileNavItem href="#certificates">Launch</MobileNavItem>
+            <SignedOut>
+              <MobileNavItem href="/sign-in">Sign in</MobileNavItem>
+            </SignedOut>
+          </nav>
         </div>
       </div>
     </header>
+  );
+}
+
+function NavItem({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link href={href} className="landing-nav-link px-3 py-2 text-sm">
+      {children}
+    </Link>
+  );
+}
+
+function MobileNavItem({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <Link
+      href={href}
+      className="inline-flex items-center rounded-lg border border-[var(--nav-chip-border)] bg-[var(--nav-chip-bg)] px-3 py-1.5 text-xs uppercase tracking-[0.12em] text-[var(--text-3)] transition-colors hover:text-[var(--text-1)]"
+    >
+      {children}
+    </Link>
   );
 }

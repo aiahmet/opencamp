@@ -12,22 +12,28 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "opencamp": "tsx tools/opencamp.ts"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.37.1",
     "@monaco-editor/react": "^4.7.0",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.2",
+    "clsx": "^2.1.1",
     "convex": "^1.31.7",
     "date-fns": "^4.1.0",
     "date-fns-tz": "^3.2.0",
+    "lucide-react": "^0.563.0",
     "next": "16.1.6",
+    "prismjs": "^1.30.0",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-markdown": "^10.1.0",
+    "rehype-prism-plus": "^2.0.1",
     "remark-gfm": "^4.0.1",
-    "svix": "^1.84.1"
+    "svix": "^1.84.1",
+    "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -38,10 +44,12 @@
     "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^4.3.4",
     "@vitest/coverage-v8": "^2.1.8",
+    "commander": "^13.1.0",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "jsdom": "^25.0.1",
     "tailwindcss": "^4",
+    "tsx": "^4.19.2",
     "typescript": "^5",
     "vitest": "^2.1.8"
   }

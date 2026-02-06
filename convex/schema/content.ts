@@ -18,15 +18,27 @@ export const contentTables = {
       v.object({
         id: v.string(),
         text: v.string(),
+        points: v.optional(v.number()),
       })
     ),
+    incrementalBuild: v.optional(v.object({
+      seriesId: v.string(),
+      stepNumber: v.number(),
+      previousStepId: v.optional(v.id("projects")),
+      totalSteps: v.number(),
+    })),
+    isPortfolioWorthy: v.optional(v.boolean()),
+    skillTags: v.optional(v.array(v.string())),
+    estimatedHours: v.optional(v.number()),
+    realWorldExample: v.optional(v.string()),
     // IMPORTANT: testSuiteId must belong to the same language as languageId
     // Use validateTestSuiteLanguage() from lib/validation.ts when inserting/updating
     testSuiteId: v.id("testSuites"),
     order: v.number(),
   })
     .index("by_language_slug", ["languageId", "slug"])
-    .index("by_language_order", ["languageId", "order"]),
+    .index("by_language_order", ["languageId", "order"])
+    .index("by_incremental_series", ["incrementalBuild.seriesId", "order"]),
 
   projectWorkspaces: defineTable({
     userId: v.id("users"),

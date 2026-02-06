@@ -36,10 +36,11 @@ type Limits = {
 };
 
 // Read limits from environment variables with defaults
+// ROADMAP Week 1 requirements: CPU 2 cores, Memory 512MB, Timeout 30 seconds
 const getConfiguredLimits = (): Limits => ({
-  cpu: parseFloat(process.env.RUNNER_CPU_LIMITS || "0.5"),
-  memoryMb: parseInt(process.env.RUNNER_MEMORY_MB || "256", 10),
-  timeoutMs: parseInt(process.env.RUNNER_TIMEOUT_MS || "10000", 10),
+  cpu: parseFloat(process.env.RUNNER_CPU_LIMITS || "2"),
+  memoryMb: parseInt(process.env.RUNNER_MEMORY_MB || "512", 10),
+  timeoutMs: parseInt(process.env.RUNNER_TIMEOUT_MS || "30000", 10),
   outputLimitBytes: parseInt(process.env.RUNNER_OUTPUT_LIMIT_BYTES || "262144", 10),
 });
 
@@ -141,16 +142,23 @@ export async function runJavaInDocker(
 
     console.log("Generated TestRunner.java:", testRunnerCode.substring(0, 200) + "...");
 
+    // Get seccomp profile path
+    const seccompProfilePath = path.join(__dirname, "../seccomp/java-profile.json");
+
     // Run Docker container with security constraints
+    // ROADMAP Week 1: Disk 100MB limit via storage-opt
     const dockerCommand = [
       "docker", "run", "--rm",
       "--network", "none",
       `--cpus=${actualLimits.cpu}`,
       `--memory=${actualLimits.memoryMb}m`,
+      `--memory-swap=${actualLimits.memoryMb}m`,
       "--pids-limit=256",
       "--security-opt=no-new-privileges",
+      "--security-opt=seccomp:" + seccompProfilePath,
       "--cap-drop=ALL",
       "--read-only",
+      "--storage-opt", "size=100m",
       "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=64m",
       "--tmpfs", "/var/tmp:rw,nosuid,nodev,noexec,size=64m",
       "--user", "1000:1000",
@@ -377,16 +385,23 @@ export async function runJavaProjectInDocker(
 
     console.log("Found Java files:", javaFiles);
 
+    // Get seccomp profile path
+    const seccompProfilePath = path.join(__dirname, "../seccomp/java-profile.json");
+
     // Run Docker container with security constraints
+    // ROADMAP Week 1: Disk 100MB limit via storage-opt
     const dockerCommand = [
       "docker", "run", "--rm",
       "--network", "none",
       `--cpus=${actualLimits.cpu}`,
       `--memory=${actualLimits.memoryMb}m`,
+      `--memory-swap=${actualLimits.memoryMb}m`,
       "--pids-limit=256",
       "--security-opt=no-new-privileges",
+      "--security-opt=seccomp:" + seccompProfilePath,
       "--cap-drop=ALL",
       "--read-only",
+      "--storage-opt", "size=100m",
       "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=64m",
       "--tmpfs", "/var/tmp:rw,nosuid,nodev,noexec,size=64m",
       "--user", "1000:1000",

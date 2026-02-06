@@ -10,6 +10,8 @@ function generateTestRunner(testSuite) {
     code += '    builder.append("{\"tests\":[");\n';
     for (let idx = 0; idx < tests.length; idx++) {
         const test = tests[idx];
+        if (!test)
+            continue;
         if (idx > 0) {
             code += ",";
         }

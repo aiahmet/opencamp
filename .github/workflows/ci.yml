@@ -1,0 +1,222 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+
+  typecheck:
+    name: TypeScript Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run TypeScript check
+        run: npx tsc --noEmit
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build Next.js
+        run: npm run build
+        env:
+          NEXT_PUBLIC_CONVEX_URL: ${{ secrets.CONVEX_DEPLOYMENT }}
+
+  security-scan:
+    name: Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          scan-ref: '.'
+          format: 'sarif'
+          output: 'trivy-results.sarif'
+
+      - name: Upload Trivy results to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-results.sarif'
+
+  runner-build:
+    name: Build Runner
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./runner
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: runner/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build runner
+        run: npm run build
+
+  # ROADMAP Week 1: Docker base image security scanning
+  docker-image-scan:
+    name: Docker Image Security Scan
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run Trivy on Java base image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'eclipse-temurin:21-jdk'
+          format: 'sarif'
+          output: 'trivy-java-results.sarif'
+
+      - name: Run Trivy on Python base image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'python:3.12-alpine'
+          format: 'sarif'
+          output: 'trivy-python-results.sarif'
+
+      - name: Run Trivy on Go base image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: 'golang:1.21-alpine'
+          format: 'sarif'
+          output: 'trivy-go-results.sarif'
+
+      - name: Upload Java scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-java-results.sarif'
+          category: 'java-docker-image'
+
+      - name: Upload Python scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-python-results.sarif'
+          category: 'python-docker-image'
+
+      - name: Upload Go scan results
+        uses: github/codeql-action/upload-sarif@v2
+        if: always()
+        with:
+          sarif_file: 'trivy-go-results.sarif'
+          category: 'go-docker-image'
+
+  # ROADMAP Week 1: npm audit for dependency security
+  npm-audit:
+    name: npm Audit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Run npm audit on main app
+        run: npm audit --audit-level=high
+        continue-on-error: true
+
+      - name: Run npm audit on runner
+        run: cd runner && npm audit --audit-level=high
+        continue-on-error: true
+
+  # ROADMAP Week 1: Automated security verification tests
+  security-tests:
+    name: Security Verification Tests
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install runner test dependencies
+        working-directory: ./runner
+        run: npm ci
+
+      - name: Run security verification tests
+        working-directory: ./runner
+        run: npm test

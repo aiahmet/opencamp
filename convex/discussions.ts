@@ -24,7 +24,7 @@ export const listDiscussionsByItemSlug = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Unauthenticated");
+      return null;
     }
 
     const item = await ctx.db
@@ -135,7 +135,7 @@ export const listDiscussionsByScope = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Unauthenticated");
+      return [];
     }
 
      const baseDiscussions = ctx.db
@@ -170,7 +170,7 @@ export const getDiscussion = query({
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) {
-      throw new Error("Unauthenticated");
+      return null;
     }
 
     const discussion = await ctx.db.get(args.discussionId);

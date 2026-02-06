@@ -53,10 +53,11 @@ const execAsyncCustom = (command, options) => {
         });
     });
 };
+// ROADMAP Week 1 requirements: CPU 2 cores, Memory 512MB, Timeout 30 seconds
 const DEFAULT_LIMITS = {
-    cpu: 0.5,
-    memoryMb: 256,
-    timeoutMs: 10000,
+    cpu: 2,
+    memoryMb: 512,
+    timeoutMs: 30000,
     outputLimitBytes: 262144, // 256KB
 };
 function truncateOutput(stdout, stderr, limitBytes) {
@@ -181,16 +182,22 @@ async function runPythonInDocker(code, testSuite, limits) {
         await fs.writeFile(testRunnerPath, testRunnerCode);
         await fs.chmod(testRunnerPath, 0o644);
         console.log("Generated test_runner.py:", testRunnerCode.substring(0, 200) + "...");
+        // Get seccomp profile path
+        const seccompProfilePath = path.join(__dirname, "../seccomp/python-profile.json");
         // Run Docker container with security constraints
+        // ROADMAP Week 1: Disk 100MB limit via storage-opt
         const dockerCommand = [
             "docker", "run", "--rm",
             "--network", "none",
             `--cpus=${actualLimits.cpu}`,
             `--memory=${actualLimits.memoryMb}m`,
+            `--memory-swap=${actualLimits.memoryMb}m`,
             "--pids-limit=256",
             "--security-opt=no-new-privileges",
+            "--security-opt=seccomp:" + seccompProfilePath,
             "--cap-drop=ALL",
             "--read-only",
+            "--storage-opt", "size=100m",
             "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=64m",
             "--tmpfs", "/var/tmp:rw,nosuid,nodev,noexec,size=64m",
             "--user", "1000:1000",
@@ -377,16 +384,22 @@ async function runPythonProjectInDocker(files, testSuite, limits) {
         await fs.writeFile(testRunnerPath, testRunnerCode);
         await fs.chmod(testRunnerPath, 0o644);
         console.log("Generated test_runner.py:", testRunnerCode.substring(0, 200) + "...");
+        // Get seccomp profile path
+        const seccompProfilePath = path.join(__dirname, "../seccomp/python-profile.json");
         // Run Docker container with security constraints
+        // ROADMAP Week 1: Disk 100MB limit via storage-opt
         const dockerCommand = [
             "docker", "run", "--rm",
             "--network", "none",
             `--cpus=${actualLimits.cpu}`,
             `--memory=${actualLimits.memoryMb}m`,
+            `--memory-swap=${actualLimits.memoryMb}m`,
             "--pids-limit=256",
             "--security-opt=no-new-privileges",
+            "--security-opt=seccomp:" + seccompProfilePath,
             "--cap-drop=ALL",
             "--read-only",
+            "--storage-opt", "size=100m",
             "--tmpfs", "/tmp:rw,nosuid,nodev,noexec,size=64m",
             "--tmpfs", "/var/tmp:rw,nosuid,nodev,noexec,size=64m",
             "--user", "1000:1000",

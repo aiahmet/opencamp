@@ -36,7 +36,7 @@ export default function CodeEditor({
   }, []);
 
   return (
-    <div className="border border-gray-300 rounded-lg overflow-hidden" style={{ height }}>
+    <div className="border border-[var(--border)] rounded-xl overflow-hidden bg-[var(--surface-2)]" style={{ height }}>
       <Editor
         height="100%"
         defaultLanguage={languageId}
@@ -55,7 +55,7 @@ export default function CodeEditor({
           formatOnPaste: true,
           formatOnType: true,
         }}
-        theme="vs"
+        theme="vs-dark"
       />
     </div>
   );

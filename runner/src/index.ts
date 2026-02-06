@@ -1,6 +1,7 @@
 import express from "express";
 import { runJavaInDocker, runJavaProjectInDocker } from "./dockerExecutor";
 import { runPythonInDocker, runPythonProjectInDocker } from "./pythonExecutor";
+import { runGoInDocker, runGoProjectInDocker } from "./goExecutor";
 import {
   RunJavaRequest,
   RunJavaProjectRequest,
@@ -8,12 +9,16 @@ import {
   HealthResponse,
   RunPythonRequest,
   RunPythonProjectRequest,
+  RunGoRequest,
+  RunGoProjectRequest,
 } from "./types";
 import {
   RunJavaRequestSchema,
   RunJavaProjectRequestSchema,
   RunPythonRequestSchema,
   RunPythonProjectRequestSchema,
+  RunGoRequestSchema,
+  RunGoProjectRequestSchema,
 } from "./validation";
 
 const app = express();
@@ -163,9 +168,76 @@ app.post<unknown, RunJavaResponse, RunPythonProjectRequest>("/run/python-project
   }
 });
 
+app.post<unknown, RunJavaResponse, RunGoRequest>("/run/go", async (req, res) => {
+  try {
+    const validationResult = RunGoRequestSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      const firstIssue = validationResult.error.issues[0];
+      const errorMessage = firstIssue ? firstIssue.message : "Invalid request";
+      res.status(400).json({
+        passed: false,
+        compile: { ok: false, stderr: "Invalid request: " + errorMessage },
+        tests: [],
+        timingMs: 0,
+      });
+      return;
+    }
+    const { code, testSuite, limits } = validationResult.data;
+    // Filter out undefined values from limits to avoid exactOptionalPropertyTypes issues
+    const filteredLimits = limits ? Object.fromEntries(
+      Object.entries(limits).filter(([, v]) => v !== undefined)
+    ) : {};
+    const result = await runGoInDocker(code, testSuite, filteredLimits as Parameters<typeof runGoInDocker>[2]);
+    res.json(result);
+  } catch (error) {
+    console.error("Error running Go code:", error);
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    res.status(500).json({
+      passed: false,
+      compile: { ok: false, stderr: errorMessage },
+      tests: [],
+      timingMs: 0,
+    });
+  }
+});
+
+app.post<unknown, RunJavaResponse, RunGoProjectRequest>("/run/go-project", async (req, res) => {
+  try {
+    const validationResult = RunGoProjectRequestSchema.safeParse(req.body);
+    if (!validationResult.success) {
+      const firstIssue = validationResult.error.issues[0];
+      const errorMessage = firstIssue ? firstIssue.message : "Invalid request";
+      res.status(400).json({
+        passed: false,
+        compile: { ok: false, stderr: "Invalid request: " + errorMessage },
+        tests: [],
+        timingMs: 0,
+      });
+      return;
+    }
+    const { files, testSuite, limits } = validationResult.data;
+    // Filter out undefined values from limits to avoid exactOptionalPropertyTypes issues
+    const filteredLimits = limits ? Object.fromEntries(
+      Object.entries(limits).filter(([, v]) => v !== undefined)
+    ) : {};
+    const result = await runGoProjectInDocker(files, testSuite, filteredLimits as Parameters<typeof runGoProjectInDocker>[2]);
+    res.json(result);
+  } catch (error) {
+    console.error("Error running Go project:", error);
+    const errorMessage = error instanceof Error ? error.message : "Internal server error";
+    res.status(500).json({
+      passed: false,
+      compile: { ok: false, stderr: errorMessage },
+      tests: [],
+      timingMs: 0,
+    });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`OpenCamp Runner listening on port ${PORT}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
   console.log(`Java execution: http://localhost:${PORT}/run/java`);
   console.log(`Python execution: http://localhost:${PORT}/run/python`);
+  console.log(`Go execution: http://localhost:${PORT}/run/go`);
 });

@@ -1,14 +1,16 @@
 import { query } from "./_generated/server";
-import { requireIdentity } from "./lib/auth";
 import { getDailyUsageFromQuery } from "./lib/quota";
 import { LIMITS, getTodayBerlin } from "./lib/limits";
 
 export const getMyUsage = query({
   args: {},
   handler: async (ctx) => {
-    await requireIdentity(ctx);
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) {
+      return null;
+    }
 
-    const clerkUserId = (await ctx.auth.getUserIdentity())!.subject;
+    const clerkUserId = identity.subject;
     const user = await ctx.db
       .query("users")
       .withIndex("by_clerkUserId", (q) => q.eq("clerkUserId", clerkUserId))

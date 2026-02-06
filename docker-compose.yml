@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  # Next.js Main Application
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: opencamp-app
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}
+      - CLERK_SECRET_KEY=${CLERK_SECRET_KEY}
+      - NEXT_PUBLIC_CONVEX_URL=${NEXT_PUBLIC_CONVEX_URL}
+      - CONVEX_DEPLOYMENT=${CONVEX_DEPLOYMENT}
+      - NEXT_PUBLIC_RUNNER_URL=http://runner:4001
+    volumes:
+      - .:/app
+      - /app/node_modules
+      - /app/.next
+    depends_on:
+      - runner
+    restart: unless-stopped
+
+  # Code Execution Runner Service
+  runner:
+    build:
+      context: ./runner
+      dockerfile: Dockerfile
+    container_name: opencamp-runner
+    ports:
+      - "4001:4001"
+    environment:
+      - PORT=4001
+      - RUNNER_CPU_LIMITS=0.5
+      - RUNNER_MEMORY_MB=256
+      - RUNNER_TIMEOUT_MS=10000
+      - RUNNER_OUTPUT_LIMIT_BYTES=262144
+    volumes:
+      - ./runner:/app
+      - /var/run/docker.sock:/var/run/docker.sock  # Mount Docker socket for container spawning
+      - /app/node_modules
+    restart: unless-stopped
+    privileged: false
+
+networks:
+  default:
+    name: opencamp-network

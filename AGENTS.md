@@ -1,162 +1,499 @@
 # AGENTS.md
 
-## Purpose
-- This file guides agentic coding tools working in this repo.
-- Follow these instructions before making edits or running commands.
+<div align="center">
 
-## CRITICAL: Do NOT Run Dev Server
-- NEVER run `npm run dev` or `npx convex dev` under any circumstances.
-- The dev server is managed separately and running it will cause lock conflicts.
-- This is a hard rule - do not attempt to verify changes by starting the dev server.
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Next.js 16 + React 19 + TypeScript + Convex + Clerk       │
+│  Tailwind v4 + shadcn/ui                                    │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**[Quick Start](#quick-start)** • **[Commands](#common-commands)** • **[Decision Tree](#decision-flowchart)** • **[Examples](#code-examples)** • **[Troubleshooting](#common-issues)**
+
+</div>
+
+---
+
+## TL;DR - The Absolute Essentials
+
+| ✅ DO | ❌ NEVER |
+|-------|----------|
+| Run `npm run lint && npm test && npm run build` before committing or when changes affect quality gates | Run `npm run dev` or `npx convex dev` (causes lock conflicts) |
+| Run `npx convex typegen` after schema changes | Write new tests (test suite is locked) |
+| Use `"use client"` for interactive components | Use `useUser`/`useAuth` in server components |
+| Use `auth()` from `@clerk/nextjs/server` in server components | Modify files in `convex/_generated/` |
+| Handle `isLoaded` before accessing Clerk data | Replace real env values with placeholders |
+
+**Component Type Decision:**
+- Needs `useState`, `useEffect`, event handlers? → `"use client"`
+- Just renders data, no interactivity? → Server Component (default)
+
+**File Locations:**
+- Pages: `app/[route]/page.tsx`
+- UI Components: `components/ui/`
+- App Components: `components/`
+- Convex Functions: `convex/[feature].ts`
+- Auth Proxy: `proxy.ts`
+
+---
+
+## Quick Start
+
+```bash
+# First time
+npm install
+
+# Before every commit
+npm run lint && npm test && npm run build
+
+# After Convex schema changes
+npx convex typegen
+```
+
+---
 
 ## Project Snapshot
-- Framework: Next.js 16 (App Router) with React 19 and TypeScript.
-- Auth: Clerk with Next.js 16 proxy support.
-- Backend: Convex (convex/ directory, generated types in convex/_generated).
-- UI: Tailwind CSS v4 + shadcn/ui (custom claymorphism theme).
-- Linting: eslint-config-next (core-web-vitals + typescript).
 
-## Key Directories
-- app/: App Router routes (page.tsx, layout.tsx, sign-in, sign-up, dashboard).
-- components/: app-level React components.
-- components/ui: shadcn/ui components.
-- middleware.ts: Next.js middleware for Clerk authentication.
-- convex/: Convex schema and server functions.
-- public/: static assets.
+| Category | Technology |
+|----------|------------|
+| Framework | Next.js 16 (App Router) + React 19 + TypeScript |
+| Runtime | Node.js 20+ |
+| Package Manager | npm |
+| Auth | Clerk with `proxy.ts` (Node.js, not Edge middleware) |
+| Backend | Convex (real-time, type-safe) |
+| UI | Tailwind CSS v4 + shadcn/ui (claymorphism theme) |
+| Test Framework | Vitest + React Testing Library |
+| Linting | eslint-config-next |
 
-## Build, Lint, Test Commands
-- Install: `npm install`
-- Dev server: `npm run dev`
-- Build: `npm run build`
-- Start (prod): `npm run start`
-- Lint: `npm run lint`
-- Convex dev: `npx convex dev`
+### Directory Structure
 
-### Tests
-- Test framework: Vitest with React Testing Library
-- Run all tests: `npm test` (single run)
-- Run tests in watch mode: `npm run test:watch`
-- Run tests with coverage: `npm run test:coverage`
-- Single test file: `npx vitest run <path-to-test-file>`
-- Single test pattern: `npx vitest run -t "test name"`
-- Coverage thresholds: 70% lines, functions, statements; 60% branches
+```
+app/                    # App Router routes
+├── [route]/
+│   ├── page.tsx       # Route pages
+│   └── layout.tsx     # Route layouts
+├── layout.tsx         # Root layout
+└── globals.css        # Theme variables
 
-## Environment Variables
-- Local env lives in `.env.local` (do not commit secrets).
-- **NEVER modify `.env.local` to replace real values with placeholder values.** The `.env.local` file contains actual working configuration.
-- Public vars must be prefixed with `NEXT_PUBLIC_`.
-- Convex auth uses `AUTH_SECRET` and must be set in the Convex dashboard.
-- Example placeholders are in `.env.local.example`.
-- Avoid logging or printing secrets in console output.
-- `WHITEBOARD_MAX_HISTORY_SIZE` controls the undo history limit (default: 1000).
+components/
+├── ui/                # shadcn/ui components (don't modify directly)
+└── [components].tsx   # App-specific components
 
-## Auth and Middleware Notes
-- Next.js 16 uses `middleware.ts` for Clerk authentication.
-- Clerk expects `clerkMiddleware()` in the middleware file.
-- Route protection lives in `middleware.ts`.
-- If auth errors mention middleware, verify matcher configuration.
-- The middleware runtime is Edge; avoid Node.js-specific APIs.
+convex/
+├── schema.ts          # Database schema
+├── auth.config.ts     # Clerk auth config
+├── _generated/        # Auto-generated types (DON'T EDIT)
+└── [feature].ts       # Queries, mutations, actions
 
-## Convex + Clerk Integration
-- Convex schema lives in `convex/schema.ts`.
-- Convex auth config lives in `convex/auth.config.ts`.
-- Convex type generation writes to `convex/_generated/`.
-- Clerk client hooks live in `@clerk/nextjs`.
-- Clerk server utilities live in `@clerk/nextjs/server`.
-- If Convex complains about `AUTH_SECRET`, set it in the Convex dashboard.
+proxy.ts               # Clerk auth proxy (Node.js runtime)
+public/                # Static assets
+```
 
-## Code Style Guidelines
+---
+
+## Critical Rules
+
+### 🚨 NEVER Run Dev Server
+- **Never** run `npm run dev` or `npx convex dev` — managed separately
+- Dev server causes file lock conflicts
+- Verify changes with `npm test`, not by running dev server
+
+### 🧪 NEVER Write New Tests
+- Test suite is maintained separately
+- **Only run existing tests:** `npm test`, `npm run test:watch`
+- Do not modify test files or add new test cases
+
+### ✅ Run Validation Commands When Necessary
+- Do **not** run `lint`, `test`, `build`, or `tsc` on every small edit by default
+- Run them when changes are likely to affect those checks, before commits, and when explicitly requested
+- Prefer targeted validation first (specific file/test), then full suite as needed
+
+### 🔐 Auth Architecture
+- **Server Components:** Use `auth()` from `@clerk/nextjs/server`
+- **Client Components:** Use `useUser`, `useAuth` from `@clerk/nextjs`
+- **Always** check `isLoaded` before accessing user data
+- Route protection happens in `proxy.ts` (Node.js runtime, not Edge middleware)
+
+### ⚠️ Environment Variables
+- **CRITICAL:** Never replace real values with placeholders in `.env.local`
+- Public vars need `NEXT_PUBLIC_` prefix
+- `AUTH_SECRET` goes in Convex dashboard, not `.env.local`
+- Keep secrets out of git
+
+---
+
+## Decision Flowchart
+
+```
+Starting a task?
+│
+├─→ Creating/editing a component
+│   │
+│   ├─→ Needs user interaction? (buttons, forms, useState, useEffect)
+│   │   └─→ YES → "use client" at top
+│   │             Use Clerk hooks (useUser, useAuth)
+│   │             Use Convex useQuery/useMutation
+│   │
+│   └─→ NO → Server Component (default, no directive)
+│            Use auth() from @clerk/nextjs/server
+│            Pass data as props to client components
+│
+├─→ Creating a Convex function?
+│   ├─→ Read data? → defineQuery in convex/*.ts
+│   ├─→ Write data? → defineMutation in convex/*.ts
+│   └─→ External API? → defineAction in convex/*.ts
+│
+└─→ Before committing?
+    └─→ ALWAYS: npm run lint && npm test && npm run build
+```
+
+---
+
+## Common Commands
+
+### Development
+```bash
+npm install                   # Install dependencies
+npm run lint                  # Check linting
+npm run lint -- --fix         # Auto-fix linting issues
+npm test                      # Run all tests
+npm run test:watch            # Watch mode
+npm run test:coverage         # Coverage report
+npm run build                 # Build production (validate before commit)
+```
+
+### Convex
+```bash
+npx convex typegen            # Generate types (after schema changes)
+npx convex deploy             # Deploy with migrations
+npx shadcn@latest add <comp>  # Add shadcn component
+```
+
+### Testing
+```bash
+npx vitest run <path>         # Run single test file
+npx vitest run -t "test name" # Run specific test
+```
+
+**Coverage Requirements:** 70% lines/functions/statements, 60% branches
+
+---
+
+## Code Style
 
 ### Formatting
-- Use 2-space indentation.
-- Keep semicolons.
-- Prefer double quotes in TS/TSX imports and strings.
-- Match the existing style in the file you edit.
-- Keep lines readable; avoid very long className strings when possible.
+- 2-space indentation
+- Keep semicolons
+- Prefer double quotes in TS/TSX
+- Match existing style in the file you edit
 
 ### Imports
-- Order imports: external packages, then absolute imports, then relative.
-- Keep imports grouped by blank lines.
-- Prefer named imports over default when available.
-
-### TypeScript and Types
-- Avoid `any` and unsafe type assertions.
-- Prefer inference for obvious types; annotate when ambiguous.
-- Use `type` aliases for props and simple shapes.
-- Use `ReactNode` for children when needed.
-- Do not edit `convex/_generated` files (generated by Convex).
+```tsx
+// Order: external → absolute → relative
+import { useUser } from "@clerk/nextjs";           // External
+import { useQuery } from "convex/react";           // External
+import { api } from "@/convex/_generated/api";     // Absolute
+import { Button } from "@/components/ui/button";   // Absolute
+import { helper } from "./utils";                   // Relative
+```
 
 ### Naming Conventions
-- Components: PascalCase (e.g., `ConvexClientProvider`).
-- Hooks: `useX` naming.
-- Variables/functions: camelCase.
-- Constants: UPPER_SNAKE_CASE if truly constant.
-- Files in `src/app` follow Next.js conventions (`page.tsx`, `layout.tsx`).
 
-### React and Next.js Patterns
-- Prefer server components by default; add `'use client'` only when needed.
-- Only call Clerk hooks (`useUser`, `useAuth`) in client components.
-- Use `next/link` for internal navigation.
-- Keep layout chrome (header, providers) in `app/layout.tsx`.
-- Put route-level UI in `app/<route>/page.tsx`.
-- Avoid using `useEffect` for data fetching unless required.
+| Type | Pattern | Example |
+|------|---------|---------|
+| Components | PascalCase | `ConvexClientProvider` |
+| Hooks | useX | `useLocalStorage` |
+| Variables/functions | camelCase | `getUserData` |
+| Constants | UPPER_SNAKE_CASE | `API_TIMEOUT` |
+| App files | Next.js convention | `page.tsx`, `layout.tsx` |
+| Convex files | kebab-case | `user-tasks.ts` |
 
-### Data Fetching and State
-- In client components, handle loading and empty states.
-- Use Convex `useQuery` in client components only.
-- Use server functions in `convex/` for data access.
-- Avoid fetching in layout unless necessary.
+### TypeScript
+- Avoid `any` and unsafe type assertions
+- Prefer inference for obvious types; annotate when ambiguous
+- Use `type` aliases for props
+- Use `ReactNode` for children
+- Do not edit `convex/_generated` files
 
-### Error Handling
-- Handle `isLoaded` before reading Clerk user/session data.
-- Show loading and empty states in client components.
-- For server errors, throw `Error` with useful messages.
-- Avoid silent failures; log or surface errors when appropriate.
+### React & Next.js
+- Prefer server components; add `'use client'` only when needed
+- Only use Clerk hooks in client components
+- Use `next/link` for navigation, `next/image` for images
+- Avoid `useEffect` for data fetching (use Convex)
+
+### Data & State
+- Handle loading states: `tasks === undefined` means loading
+- Use Convex `useQuery` in client components only
+- Show empty states when arrays have length 0
+- Avoid fetching in layout unless necessary
 
 ### Styling
-- Use Tailwind CSS utility classes for layout and spacing.
-- Use shadcn/ui components from `components/ui` for consistency.
-- Theme variables live in `app/globals.css`.
-- When modifying theme variables, keep the existing variable names.
-- Prefer CSS variables over hard-coded colors in new components.
-- Avoid inline styles unless necessary for dynamic values.
+- Use Tailwind utility classes
+- Use shadcn/ui components from `components/ui/`
+- Prefer CSS variables in `app/globals.css` over hard-coded colors
+- Avoid inline styles (except for dynamic values)
 
-### Accessibility
-- Use semantic HTML (header, main, section, button).
-- Provide accessible button labels and link text.
-- Ensure focus states are visible (Tailwind focus-visible utilities).
+### Performance
+- Keep bundle sizes under 200KB per route
+- Use `next/image` with proper sizing
+- Minimize client-side JS; prefer server components
+- Debounce expensive operations (search, resize)
 
-### Comments
-- Never write useless long comments.
-- Keep comments very concise.
-- Only add comments when necessary to explain complex logic or non-obvious behavior.
+---
 
-## Linting Rules
-- ESLint is configured via `eslint.config.mjs`.
-- It includes Next.js core web vitals and TypeScript rules.
-- Default ignores include `.next/`, `out/`, `build/`, and `next-env.d.ts`.
-- Keep lint clean before merging changes.
+## Code Examples
 
-## Generated and Vendor Files
-- Do not edit `.next/` or `convex/_generated/` manually.
-- Regenerate Convex types by running `npx convex dev`.
-- Do not edit `node_modules/`.
+### Server Component
+```tsx
+import { auth } from "@clerk/nextjs/server";
 
-## Cursor/Copilot Rules
-- No `.cursor/rules/`, `.cursorrules`, or `.github/copilot-instructions.md` found.
-- If you add rules later, update this file accordingly.
+export default async function DashboardPage() {
+  const { userId } = await auth();
+  if (!userId) return <div>Please sign in</div>;
+  
+  return (
+    <div className="p-4">
+      <h1>Dashboard</h1>
+    </div>
+  );
+}
+```
+
+### Client Component
+```tsx
+"use client";
+import { useUser } from "@clerk/nextjs";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
+export default function UserProfile() {
+  const { user, isLoaded } = useUser();
+  const profile = useQuery(api.users.getProfile, { userId: user?.id });
+
+  if (!isLoaded) return <div>Loading...</div>;
+  if (!user) return <div>Please sign in</div>;
+  
+  return <div className="p-4"><h1>{profile?.name}</h1></div>;
+}
+```
+
+### Convex Query
+```tsx
+import { defineQuery } from "convex/server";
+import { v } from "convex/values";
+
+export const getTasks = defineQuery({
+  args: { userId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("tasks")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+  },
+});
+```
+
+### Convex Mutation
+```tsx
+import { defineMutation } from "convex/server";
+import { v } from "convex/values";
+
+export const createTask = defineMutation({
+  args: { title: v.string(), userId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db.insert("tasks", {
+      title: args.title,
+      userId: args.userId,
+      completed: false,
+    });
+  },
+});
+```
+
+### Loading State Pattern
+```tsx
+"use client";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+
+export function TaskList() {
+  const tasks = useQuery(api.tasks.list);
+
+  if (tasks === undefined) 
+    return <div className="animate-pulse">Loading...</div>;
+  
+  if (tasks.length === 0) 
+    return <div className="text-gray-500">No tasks yet</div>;
+
+  return (
+    <ul>
+      {tasks.map((task) => <li key={task._id}>{task.title}</li>)}
+    </ul>
+  );
+}
+```
+
+---
 
 ## Common Tasks
-- Add shadcn component: `npx shadcn@latest add <component>`.
-- Add a new route: create `app/<route>/page.tsx`.
-- Protect routes: update matchers in `middleware.ts`.
-- Update theme: edit CSS variables in `app/globals.css`.
-- Add Convex function: create a file in `convex/` and run `npx convex dev`.
-- Update dependencies: edit `package.json` and keep `package-lock.json` in sync.
 
-## Practical Tips
-- Keep secrets out of git; use `.env.local` for local-only values.
-- After auth changes, re-run `npm run dev` to reload env.
-- If build errors mention Clerk, verify `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`.
-- If Convex errors mention AUTH_SECRET, update it in the Convex dashboard.
-- `SETUP_COMPLETE.md` contains detailed setup notes.
+| Task | How To |
+|------|--------|
+| Add shadcn component | `npx shadcn@latest add <component>` |
+| Add new route | Create `app/<route>/page.tsx` |
+| Protect routes | Update `proxy.ts` matchers |
+| Update theme | Edit `app/globals.css` variables |
+| Add Convex function | Create `convex/<feature>.ts` |
+| Deploy Convex | `npx convex deploy` (auto-runs migrations) |
+
+---
+
+## Before You Edit Checklist
+
+1. **Read** the target file to understand context
+2. **Read** 2-3 similar files to understand conventions  
+3. **Check** imports and dependencies
+4. **Verify** correct directory location
+5. **Run** `npm run lint && npm test` after changes
+
+**Ask for help when:**
+- Multiple valid approaches exist in codebase
+- Pattern conflicts with general best practices
+- Need to add new dependency
+- Modifying generated files
+- Change spans auth + UI + data
+
+---
+
+## Environment Variables
+
+**Local:** `.env.local` (never commit)
+
+```bash
+# Clerk Auth
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/dashboard
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/dashboard
+
+# Convex
+NEXT_PUBLIC_CONVEX_URL=
+CONVEX_DEPLOYMENT=
+
+# AUTH_SECRET → Set in Convex dashboard, NOT here
+```
+
+---
+
+## Architecture
+
+### Data Flow
+```
+Client → Next.js App Router → Clerk Auth Check (proxy.ts)
+                     ↓
+            Convex Server Functions
+                     ↓
+              Convex Database
+                     ↓
+         Real-time Subscriptions → React Components
+```
+
+### Key Principles
+- **Server Components by default** — client components only for interactivity
+- **All data fetching through Convex** — no direct DB connections
+- **Authentication at proxy.ts** — Clerk middleware in Node.js runtime
+- **UI components in components/ui/** — shadcn pattern, extend via composition
+
+### proxy.ts vs middleware.ts
+
+| Feature | middleware.ts (deprecated) | proxy.ts (current) |
+|---------|---------------------------|-------------------|
+| Runtime | Edge (limited APIs) | Node.js (full APIs) |
+| Use case | Simple redirects | Complex auth logic |
+| Pattern | `export const middleware` | Named exports |
+
+**Why proxy.ts?** Clerk recommends it, better JWT verification, easier debugging.
+
+---
+
+## Common Issues
+
+### Build Errors
+| Error | Solution |
+|-------|----------|
+| Module not found | Run `npm install` |
+| Cannot read properties of undefined | Check Convex query undefined handling |
+| NextRouter not mounted | Only use `useRouter` in client components |
+
+### Convex Errors
+| Error | Solution |
+|-------|----------|
+| AUTH_SECRET not set | Configure in Convex dashboard |
+| Action without authentication | Check Clerk auth state |
+| Document not found | Verify document IDs |
+| Type errors after schema | Run `npx convex typegen` |
+
+### Clerk Errors
+| Error | Solution |
+|-------|----------|
+| clerkMiddleware not defined | Check imports from `@clerk/nextjs/server` |
+| User not authenticated | Check `isLoaded` before accessing user |
+| Invalid publishable key | Verify `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` |
+
+### Linting Errors
+| Error | Solution |
+|-------|----------|
+| Missing semicolon | Add semicolons |
+| Unused variable | Remove or prefix with `_` |
+| Import order | Reorder: external → absolute → relative |
+
+---
+
+## Git Workflow
+
+| Item | Rule |
+|------|------|
+| Main branch | `main` (production-ready) |
+| Feature branches | `feature/description`, `fix/description` |
+| Commits | Conventional: `feat:`, `fix:`, `docs:`, `refactor:` |
+| PRs | Required for all changes to main |
+| Pre-commit | `npm run lint` runs via husky |
+
+---
+
+## CI/CD Pipeline
+
+- **CI:** Runs on every PR (lint, TypeScript, tests, build)
+- **Coverage:** Must pass 70% lines, 60% branches
+- **Deploy:** Auto-deploy to Vercel + Convex on merge to main
+
+---
+
+## Resources
+
+- [Next.js 16 Docs](https://nextjs.org/docs)
+- [Convex Docs](https://docs.convex.dev)
+- [Clerk Docs](https://clerk.com/docs)
+- [Tailwind v4](https://tailwindcss.com/docs)
+- [shadcn/ui](https://ui.shadcn.com)
+
+---
+
+## First Time Setup Checklist
+
+- [ ] Run `npm install`
+- [ ] Create `.env.local` with required vars (don't commit)
+- [ ] Run `npm run lint && npm test` to verify setup
+- [ ] Review code patterns in your target area
+- [ ] Check `SETUP_COMPLETE.md` for detailed setup notes
+
+---
+
+<div align="center">
+
+**Need help?** Check [Common Issues](#common-issues) or refer to [External Resources](#resources)
+
+</div>

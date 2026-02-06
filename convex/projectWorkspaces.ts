@@ -1,12 +1,13 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireIdentity } from "./lib/auth";
+import { getFileExtension } from "./lib/language";
 
 const MAX_FILES = 30;
 const MAX_FILE_SIZE = 200 * 1024; // 200KB
 const MAX_FILE_NAME_LENGTH = 100;
 
-function validateFilePath(path: string): { valid: boolean; error?: string } {
+function validateFilePath(path: string, allowedExtensions: string[]): { valid: boolean; error?: string } {
   if (!path || path.length === 0) {
     return { valid: false, error: "File path cannot be empty" };
   }
@@ -16,9 +17,17 @@ function validateFilePath(path: string): { valid: boolean; error?: string } {
   if (path.startsWith("/") || path.includes("..")) {
     return { valid: false, error: "File paths cannot be absolute or contain '..'" };
   }
-  const allowedPattern = /^[a-zA-Z0-9_\-/]+\.java$/;
+  const escapedExtensions = allowedExtensions
+    .filter(Boolean)
+    .map((ext) => ext.replace(".", "\\."));
+  const extensionPattern = escapedExtensions.length > 0 ? escapedExtensions.join("|") : "\\.txt";
+  const allowedPattern = new RegExp(`^[a-zA-Z0-9_\\-/]+(${extensionPattern})$`, "i");
   if (!allowedPattern.test(path)) {
-    return { valid: false, error: "Only .java files with alphanumeric names are allowed" };
+    const allowedList = allowedExtensions.length > 0 ? allowedExtensions.join(", ") : ".txt";
+    return {
+      valid: false,
+      error: `Only ${allowedList} files with alphanumeric names are allowed`,
+    };
   }
   return { valid: true };
 }
@@ -89,6 +98,9 @@ export const upsertWorkspace = mutation({
       throw new Error("Project not found");
     }
 
+    const language = await ctx.db.get(project.languageId);
+    const allowedExtensions = [getFileExtension(language?.editorConfig?.monacoLanguageId ?? "plaintext")];
+
     // Validate files
     if (args.files.length > MAX_FILES) {
       throw new Error(`Too many files (max ${MAX_FILES})`);
@@ -98,7 +110,7 @@ export const upsertWorkspace = mutation({
     const seenPaths = new Set<string>();
 
     for (const file of args.files) {
-      const pathValidation = validateFilePath(file.path);
+      const pathValidation = validateFilePath(file.path, allowedExtensions);
       if (!pathValidation.valid) {
         throw new Error(`Invalid file path "${file.path}": ${pathValidation.error}`);
       }

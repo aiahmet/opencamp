@@ -84,6 +84,40 @@ export interface RunJavaResponse {
   outputTruncated?: boolean;
 }
 
+export interface GoTestSuite {
+  type: "go";
+  entrypoint: string;
+  function: string;
+  tests: Array<{
+    name: string;
+    input: unknown;
+    expected: unknown;
+  }>;
+}
+
+export interface RunGoRequest {
+  code: string;
+  testSuite: GoTestSuite;
+  limits?: {
+    cpu?: number;
+    memoryMb?: number;
+    timeoutMs?: number;
+  };
+}
+
+export interface RunGoProjectRequest {
+  files: Array<{
+    path: string;
+    content: string;
+  }>;
+  testSuite: GoTestSuite;
+  limits?: {
+    cpu?: number;
+    memoryMb?: number;
+    timeoutMs?: number;
+  };
+}
+
 export interface HealthResponse {
   ok: true;
 }
